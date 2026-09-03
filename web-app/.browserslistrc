@@ -1,0 +1,7 @@
+# Navegadores reales del proyecto: celulares de campo + escritorio de oficina.
+# Sin esto los linters de compatibilidad marcan Wake Lock / theme-color por Firefox.
+last 2 chrome versions
+last 2 edge versions
+last 2 and_chr versions
+last 2 ios_saf versions
+last 2 safari versions

@@ -1,0 +1,17 @@
+{
+  "name": "Inspección de campo · Equipo de torre — TACKER",
+  "short_name": "Eq. de torre",
+  "description": "Recorrida de pre-auditoría de equipos de torre: 94 ítems, foto obligatoria en los hallazgos y detección de reiterativos.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f5f5f4",
+  "theme_color": "#0c0a09",
+  "lang": "es-AR",
+  "icons": [
+    { "src": "./icono-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "./icono-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "./icono-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

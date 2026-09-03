@@ -1,0 +1,18 @@
+node_modules/
+dist/
+.DS_Store
+*.local
+.env
+.env.*
+!.env.example
+
+# Planillas con PIN o datos de reparto en claro: nunca al repo.
+*credenciales*
+*reparto*.xlsx
+
+# Salida temporal del script de SharePoint
+sharepoint/*.log
+
+# Artefactos de herramientas locales, no del proyecto
+.claude-flow/
+.claude/

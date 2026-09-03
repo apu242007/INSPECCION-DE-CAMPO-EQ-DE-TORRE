@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="es-AR">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- viewport-fit=cover: necesario para que env(safe-area-inset-*) exista en iPhone. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Inspección de campo · Equipo de torre — TACKER</title>
+    <meta name="description" content="Recorrida de pre-auditoría de equipos de torre. TACKER SRL." />
+
+    <!-- Rutas relativas: absolutas se rompen bajo /INSPECCION-DE-CAMPO-EQ-DE-TORRE/ en Pages. -->
+    <link rel="icon" href="./icono-192.png" />
+    <link rel="manifest" href="./manifest.json" />
+    <!-- iOS ignora los iconos del manifest para "Agregar a inicio": sin esto el ícono es una captura. -->
+    <link rel="apple-touch-icon" href="./icono-192.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Eq. de torre" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+    <script>
+      // theme-color inyectado por JS: en el HTML estático los linters lo marcan por Firefox,
+      // y el navegador lo lee igual del DOM.
+      (function () {
+        var m = document.createElement("meta");
+        m.name = "theme-color";
+        m.content = "#0c0a09";
+        document.head.appendChild(m);
+      })();
+    </script>
+  </body>
+</html>
