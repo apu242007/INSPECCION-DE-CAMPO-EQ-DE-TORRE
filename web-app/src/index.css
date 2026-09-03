@@ -3,76 +3,285 @@
 @tailwind utilities;
 
 /*
- * La app se usa a pleno sol, con guantes y con una mano. El default es alto contraste:
- * fondo claro, texto negro, botones solidos. Nada de grises finos ni de hover.
+ * SISTEMA DE DISEÑO
+ *
+ * El vocabulario visual no sale de una paleta de marca: sale de la señalética de seguridad
+ * del yacimiento. La cuadrilla ya lee rojo/naranja/amarillo/verde todos los días en el equipo,
+ * en los matafuegos y en los carteles. Usar otra escala sería pedirles que aprendan un idioma
+ * nuevo para decir lo mismo.
+ *
+ * La única excepción es el violeta de "reiterativo": es el concepto propio de esta app y no
+ * puede confundirse jamás con una severidad, así que vive fuera de la escala de señalética.
+ *
+ * Cada color tiene dos formas:
+ *   --x        relleno saturado. Va con texto blanco SOLO en texto grande y bold (>= 18.66px),
+ *              que es el umbral 3:1 de WCAG. El amarillo nunca: lleva texto oscuro, como el
+ *              cartel real.
+ *   --x-ink    variante oscura para texto chico sobre fondo claro (umbral 4.5:1).
+ *   --x-suave  fondo tenue para resaltar filas sin gritar.
  */
 
 :root {
+  /* Neutros: acero pintado y zinc galvanizado. Fríos, nunca crema. */
+  --acero-900: #1c1f21;
+  --acero-700: #3b4145;
+  --acero-500: #6b7378;
+  --acero-300: #b9bfc2;
+  --acero-200: #d6dadc;
+  --acero-100: #e8eaea;
+  --acero-050: #f3f5f5;
+  --papel: #ffffff;
+
+  /* Señalética */
+  --critico: #c8102e;
+  --critico-ink: #a50d24;
+  --critico-suave: #fdeaed;
+
+  --mayor: #d2560a;
+  --mayor-ink: #9a4508;
+  --mayor-suave: #fdf0e6;
+
+  --menor: #f2b705;
+  --menor-ink: #7a5b02;
+  --menor-suave: #fdf6e0;
+
+  --general: #6b7378;
+  --general-ink: #4b5257;
+  --general-suave: #eff1f2;
+
+  --conforme: #14804a;
+  --conforme-ink: #0f6b3e;
+  --conforme-suave: #e6f4ec;
+
+  /* Fuera de la escala de señalética, a propósito. */
+  --reiterado: #6d3f9e;
+  --reiterado-ink: #5a3384;
+  --reiterado-suave: #f2ecf9;
+
+  --nuevo: #1d4ed8;
+  --nuevo-ink: #1e40af;
+  --nuevo-suave: #e8eefc;
+
+  /*
+   * Dos escalas tipográficas para dos contextos. En campo la pantalla se lee a un brazo de
+   * distancia, con guantes y con el casco puesto; en oficina se leen 94 filas de un vistazo.
+   * Forzar una sola escala arruina las dos.
+   */
   --fs-base: 18px;
+  --radio: 6px;
+  --borde: 1px;
+
   color-scheme: light;
+}
+
+/* Escritorio: el mismo componente, más denso. */
+@media (min-width: 1024px) {
+  :root {
+    --fs-base: 15px;
+  }
+}
+
+/*
+ * Modo sol. No es "alto contraste" genérico: es la corrección real para leer a mediodía en
+ * la Cuenca. Sube el tamaño, lleva el fondo a blanco puro y engrosa los bordes.
+ */
+html[data-contraste="alto"] {
+  --fs-base: 20px;
+  --acero-100: #ffffff;
+  --acero-050: #ffffff;
+  --acero-300: #6b7378;
+  --acero-200: #9aa1a5;
+  --borde: 2px;
+}
+@media (min-width: 1024px) {
+  html[data-contraste="alto"] {
+    --fs-base: 17px;
+  }
 }
 
 html {
   font-size: var(--fs-base);
+  text-size-adjust: 100%;
   -webkit-text-size-adjust: 100%;
 }
 
 body {
   margin: 0;
-  background: #f5f5f4;
-  color: #0c0a09;
+  background: var(--acero-100);
+  color: var(--acero-900);
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   /* El notch del iPhone se come el botón de acción si no se reserva el área segura. */
   padding-bottom: env(safe-area-inset-bottom);
 }
 
-/* Modo sol: sube el contraste todavía más y engorda la tipografía. */
-html[data-contraste="alto"] {
-  --fs-base: 20px;
+/*
+ * Todo número que cambia en vivo va con cifras de ancho fijo. Sin esto, el contador
+ * "23/94 · Mástil" baila cada vez que avanza un ítem, y en la mano lo ves temblar.
+ */
+.cifras,
+table,
+.kpi-valor,
+.badge {
+  font-variant-numeric: tabular-nums;
 }
-html[data-contraste="alto"] body {
-  background: #ffffff;
-  color: #000000;
+
+/* Foco visible siempre. En escritorio esta app se recorre con Tab. */
+:focus-visible {
+  outline: 3px solid var(--acero-900);
+  outline-offset: 2px;
+  border-radius: 3px;
 }
-html[data-contraste="alto"] .tarjeta {
-  border-color: #000000;
-  border-width: 2px;
+html[data-contraste="alto"] :focus-visible {
+  outline-width: 4px;
 }
 
 @layer components {
-  .tarjeta {
-    @apply rounded-lg border border-stone-300 bg-white p-4 shadow-sm;
+  /*
+   * `panel` reemplaza a la vieja `.tarjeta`. La diferencia no es estética: la tarjeta se
+   * ponía alrededor de TODO, con el mismo radio y la misma sombra, y eso aplana la jerarquía
+   * hasta que nada resalta. Un panel se usa solo donde el agrupamiento es real.
+   */
+  .panel {
+    @apply bg-[var(--papel)];
+    border: var(--borde) solid var(--acero-200);
+    border-radius: var(--radio);
   }
 
-  /* Botón de estado en altura: 72px es requisito de UX, no una preferencia estética. */
+  .panel-titulo {
+    @apply flex items-baseline gap-2 px-4 pb-2 pt-3 text-lg font-semibold;
+  }
+
+  .panel-cuerpo {
+    @apply px-4 pb-4;
+  }
+
+  /*
+   * Botón de estado. Es el control de un tablero de comando, no un botón de web: alto fijo
+   * de 72px (requisito de operación con guantes), texto grande, y hundido al presionar.
+   * Nada de hover: en campo no existe el puntero.
+   */
   .boton-estado {
-    @apply flex min-h-boton w-full items-center justify-center rounded-lg
-           px-4 text-xl font-bold uppercase tracking-wide text-white
-           transition-transform active:scale-[0.98] disabled:opacity-40;
+    @apply relative flex w-full items-center justify-center gap-2 font-bold uppercase text-white;
+    min-height: 72px;
+    border-radius: var(--radio);
+    font-size: 1.25rem;
+    letter-spacing: 0.02em;
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
+    transition: transform 90ms ease-out;
+  }
+  .boton-estado:active {
+    transform: translateY(2px);
+  }
+  .boton-estado:disabled {
+    opacity: 0.35;
+  }
+
+  /* El seleccionado se marca con un borde grueso del color del acero, no con un tinte suave:
+     a pleno sol un tinte no se distingue. */
+  .boton-estado[aria-pressed="true"] {
+    box-shadow:
+      inset 0 0 0 4px var(--papel),
+      0 0 0 4px var(--acero-900);
   }
 
   .boton-primario {
-    @apply flex min-h-[56px] w-full items-center justify-center rounded-lg bg-stone-900
-           px-4 text-lg font-bold text-white active:scale-[0.98]
-           disabled:bg-stone-400 disabled:active:scale-100;
+    @apply flex w-full items-center justify-center bg-[var(--acero-900)] font-bold text-white;
+    min-height: 56px;
+    border-radius: var(--radio);
+    font-size: 1.0625rem;
+    padding: 0 1rem;
     touch-action: manipulation;
+    transition: transform 90ms ease-out;
+  }
+  .boton-primario:active {
+    transform: translateY(1px);
+  }
+  .boton-primario:disabled {
+    @apply bg-[var(--acero-500)];
+    transform: none;
   }
 
   .boton-secundario {
-    @apply flex min-h-[48px] items-center justify-center rounded-lg border-2 border-stone-800
-           bg-white px-4 text-base font-bold text-stone-900 active:scale-[0.98];
+    @apply inline-flex items-center justify-center bg-[var(--papel)] font-semibold text-[var(--acero-900)];
+    min-height: 48px;
+    padding: 0 0.875rem;
+    border: 2px solid var(--acero-900);
+    border-radius: var(--radio);
     touch-action: manipulation;
+    transition: transform 90ms ease-out;
+  }
+  .boton-secundario:active {
+    transform: translateY(1px);
+  }
+  .boton-secundario:disabled {
+    @apply border-[var(--acero-300)] text-[var(--acero-500)];
+    transform: none;
   }
 
+  .boton-peligro {
+    @apply border-[var(--critico-ink)] text-[var(--critico-ink)];
+  }
+
+  /*
+   * Badge de señalética. Chico, sólido, en mayúsculas: acá las versalitas no son cromo
+   * decorativo, es la convención del cartel de seguridad que la cuadrilla ya lee.
+   */
   .badge {
-    @apply inline-flex items-center rounded px-2 py-0.5 text-xs font-bold uppercase text-white;
+    @apply inline-flex items-center whitespace-nowrap font-bold uppercase text-white;
+    font-size: 0.6875rem;
+    letter-spacing: 0.04em;
+    padding: 0.125rem 0.4rem;
+    border-radius: 3px;
+    line-height: 1.5;
   }
 
   .campo {
-    @apply w-full rounded-lg border-2 border-stone-400 bg-white px-3 py-2 text-base
-           text-stone-900 focus:border-stone-900 focus:outline-none;
+    @apply w-full bg-[var(--papel)] text-[var(--acero-900)];
+    border: 2px solid var(--acero-300);
+    border-radius: var(--radio);
+    padding: 0.5rem 0.75rem;
+    font-size: 1rem;
+    min-height: 48px;
+  }
+  .campo:focus {
+    border-color: var(--acero-900);
+    outline: none;
+  }
+
+  .etiqueta {
+    @apply block text-sm font-semibold text-[var(--acero-700)];
+  }
+
+  /*
+   * Los cuatro estados, apilados. En horizontal el alto de pantalla se derrumba y cuatro
+   * botones de 72px no entran: pasan a 2x2, que además deja los dos más usados bajo el pulgar.
+   */
+  .grid-estados {
+    @apply grid gap-2.5;
+  }
+  @media (orientation: landscape) and (max-height: 560px) {
+    .grid-estados {
+      grid-template-columns: 1fr 1fr;
+    }
+    .boton-estado {
+      min-height: 64px;
+      font-size: 1.125rem;
+    }
+  }
+  /* En tablet y escritorio los cuatro entran en una fila y se ven como un tablero. */
+  @media (min-width: 768px) {
+    .grid-estados {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
+
+  /* Fila de dato: separador fino en vez de una tarjeta por fila. */
+  .fila {
+    border-bottom: 1px solid var(--acero-200);
+  }
+  .fila:last-child {
+    border-bottom: 0;
   }
 }
 
@@ -82,7 +291,7 @@ html[data-contraste="alto"] .tarjeta {
  */
 input[type="checkbox"],
 input[type="radio"] {
-  accent-color: #0c0a09;
+  accent-color: var(--acero-900);
   width: 1.25rem;
   height: 1.25rem;
 }
@@ -95,13 +304,20 @@ body,
   overflow-x: hidden;
 }
 
+/* El contenido ancho (tablas, gráficos) scrollea dentro de su caja, no del documento. */
 .tabla-scroll {
   @apply w-full overflow-x-auto;
-  -webkit-overflow-scrolling: touch;
 }
 
+/*
+ * El movimiento solo responde a una acción de la persona (marcar, abrir, confirmar).
+ * No hay entradas animadas ni transiciones de hover en tarjetas: en una app operativa eso
+ * es ruido, y con guantes mojados una animación de 300 ms se siente como que no respondió.
+ */
 @media (prefers-reduced-motion: reduce) {
-  * {
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }

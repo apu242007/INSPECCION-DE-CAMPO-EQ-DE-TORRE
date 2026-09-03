@@ -32,8 +32,8 @@ export function CierreRecorrida({
 
   if (recorrida.cerrada) {
     return (
-      <section className="tarjeta space-y-3">
-        <h3 className="text-lg font-bold">Recorrida cerrada</h3>
+      <section className="panel p-4 space-y-3">
+        <h3 className="text-lg font-semibold">Recorrida cerrada</h3>
         <p className="text-sm">
           Cerrada el {new Date(recorrida.firmas?.fecha ?? recorrida.actualizadaEn).toLocaleString("es-AR")}.
           La edición está bloqueada.
@@ -46,11 +46,11 @@ export function CierreRecorrida({
   }
 
   return (
-    <section className="tarjeta space-y-4">
-      <h3 className="text-lg font-bold">Cerrar recorrida</h3>
+    <section className="panel p-4 space-y-4">
+      <h3 className="text-lg font-semibold">Cerrar recorrida</h3>
 
       {resultado.motivos.length > 0 && (
-        <div className="rounded-lg border-2 border-enProc bg-orange-50 p-3">
+        <div className="rounded-lg border-2 border-mayor-ink bg-mayor-suave p-3">
           <p className="font-bold">No se puede cerrar todavía:</p>
           <ul className="ml-5 mt-1 list-disc text-sm">
             {resultado.motivos.map((m) => (
@@ -60,13 +60,13 @@ export function CierreRecorrida({
 
           {resultado.faltantes.length > 0 && (
             <div className="mt-3">
-              <p className="text-sm font-bold">Ítems sin foto — tocá para ir a cada uno:</p>
+              <p className="text-sm font-semibold">Ítems sin foto — tocá para ir a cada uno:</p>
               <div className="mt-1 flex flex-wrap gap-2">
                 {resultado.faltantes.map((f) => (
                   <button
                     key={f.itemId}
                     type="button"
-                    className="rounded border-2 border-noOk px-3 py-1 text-sm font-bold text-noOk"
+                    className="rounded border-2 border-critico-ink px-3 py-1 text-sm font-semibold text-critico-ink"
                     onClick={() => onAbrirItem(f.itemId)}
                   >
                     #{f.itemId} · {catalogo.get(f.itemId)?.zona ?? ""}

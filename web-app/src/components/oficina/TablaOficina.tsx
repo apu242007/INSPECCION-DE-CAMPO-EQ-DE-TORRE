@@ -31,8 +31,8 @@ export function TablaOficina({ recorrida, catalogo, filtros, onAbrirItem, itemSe
   return (
     <div className="tabla-scroll">
       <table className="w-full min-w-[900px] text-sm">
-        <thead className="sticky top-0 bg-stone-100">
-          <tr className="border-b-2 border-stone-400 text-left">
+        <thead className="sticky top-0 bg-acero-50">
+          <tr className="border-b-2 border-acero-300 text-left">
             <th className="p-2">#</th>
             <th className="p-2">Zona</th>
             <th className="p-2">Crit.</th>
@@ -55,9 +55,9 @@ export function TablaOficina({ recorrida, catalogo, filtros, onAbrirItem, itemSe
             return (
               <tr
                 key={r.itemId}
-                className={`cursor-pointer border-b border-stone-200 hover:bg-stone-50 ${
-                  itemSeleccionado === r.itemId ? "bg-stone-100" : ""
-                } ${faltaFoto ? "bg-red-50" : ""}`}
+                className={`cursor-pointer border-b border-acero-200 hover:bg-acero-50 ${
+                  itemSeleccionado === r.itemId ? "bg-acero-50" : ""
+                } ${faltaFoto ? "bg-critico-suave" : ""}`}
                 onClick={() => onAbrirItem(r.itemId)}
               >
                 <td className="p-2 font-bold">
@@ -69,22 +69,28 @@ export function TablaOficina({ recorrida, catalogo, filtros, onAbrirItem, itemSe
                   <span className={`badge ${CLASE_CRITICIDAD[criticidad]}`}>
                     {ETIQUETA_CRITICIDAD[criticidad]}
                   </span>
-                  {estaEscalado(r, catalogo) && <span className="badge ml-1 bg-critica">ESC</span>}
+                  {estaEscalado(r, catalogo) && <span className="badge ml-1 bg-critico">ESC</span>}
                 </td>
                 <td className="p-2">{info?.item}</td>
                 <td className="p-2">
-                  <span className={`badge ${CLASE_ESTADO[r.estado]}`}>{ETIQUETA_ESTADO[r.estado]}</span>
+                  {r.estado === "SIN_REVISAR" ? (
+                    <span className="text-sm text-acero-500">Pendiente</span>
+                  ) : (
+                    <span className={`badge ${CLASE_ESTADO[r.estado]}`}>
+                      {ETIQUETA_ESTADO[r.estado]}
+                    </span>
+                  )}
                 </td>
                 <td className="p-2 whitespace-nowrap">
                   {r.origen && (
-                    <span className={`badge ${r.origen === "NUEVO" ? "bg-blue-700" : "bg-violet-700"}`}>
+                    <span className={`badge ${r.origen === "NUEVO" ? "bg-nuevo" : "bg-reiterado"}`}>
                       {badgeOrigen(r.origen, r.reiteracion)}
                     </span>
                   )}
                 </td>
                 <td className="p-2 whitespace-nowrap">{r.responsable ?? "—"}</td>
                 <td className="p-2 whitespace-nowrap">{fechaSoloDia(r.plazo)}</td>
-                <td className={`p-2 ${faltaFoto ? "font-bold text-noOk" : ""}`}>
+                <td className={`p-2 ${faltaFoto ? "font-bold text-critico-ink" : ""}`}>
                   {faltaFoto ? "falta" : r.evidencia.length || "—"}
                 </td>
                 <td className="p-2">{r.estadoFinal ?? "—"}</td>

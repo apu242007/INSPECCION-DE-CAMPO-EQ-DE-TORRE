@@ -76,12 +76,12 @@ export function Configuracion() {
   }
 
   return (
-    <div className="space-y-3 p-3">
-      <h1 className="text-2xl font-bold">Configuración</h1>
-      {mensaje && <p className="tarjeta text-sm font-bold">{mensaje}</p>}
+    <div className="mx-auto w-full max-w-4xl space-y-4 p-3 md:p-6">
+      <h1 className="text-2xl font-semibold">Configuración</h1>
+      {mensaje && <p className="panel p-4 text-sm font-semibold">{mensaje}</p>}
 
-      <section className="tarjeta space-y-2">
-        <h2 className="text-lg font-bold">Modo sol / alto contraste</h2>
+      <section className="panel p-4 space-y-2">
+        <h2 className="text-lg font-semibold">Modo sol / alto contraste</h2>
         <label className="flex items-center gap-2">
           <input
             type="checkbox"
@@ -95,9 +95,9 @@ export function Configuracion() {
         </label>
       </section>
 
-      <section className="tarjeta space-y-2">
-        <h2 className="text-lg font-bold">Responsables frecuentes</h2>
-        <p className="text-sm text-stone-600">
+      <section className="panel p-4 space-y-2">
+        <h2 className="text-lg font-semibold">Responsables frecuentes</h2>
+        <p className="text-sm text-acero-500">
           Aparecen como sugerencia al asignar un responsable en modo oficina.
         </p>
         <div className="flex gap-2">
@@ -129,7 +129,7 @@ export function Configuracion() {
               <span className="flex-1">{r}</span>
               <button
                 type="button"
-                className="font-bold text-noOk underline"
+                className="font-bold text-critico-ink underline"
                 onClick={() =>
                   void guardar({
                     ...config,
@@ -144,9 +144,9 @@ export function Configuracion() {
         </ul>
       </section>
 
-      <section className="tarjeta space-y-2">
-        <h2 className="text-lg font-bold">Orden de recorrida por equipo</h2>
-        <p className="text-sm text-stone-600">
+      <section className="panel p-4 space-y-2">
+        <h2 className="text-lg font-semibold">Orden de recorrida por equipo</h2>
+        <p className="text-sm text-acero-500">
           El paso a paso sigue este orden. Conviene que coincida con el recorrido físico —de
           abajo hacia arriba— para no subir y bajar del mástil dos veces.
         </p>
@@ -165,8 +165,8 @@ export function Configuracion() {
 
             <ol className="space-y-1">
               {orden.map((z, i) => (
-                <li key={z} className="flex items-center gap-2 rounded border border-stone-300 p-2">
-                  <span className="w-6 text-sm font-bold text-stone-500">{i + 1}</span>
+                <li key={z} className="flex items-center gap-2 rounded border border-acero-200 p-2">
+                  <span className="w-6 text-sm font-semibold text-acero-500">{i + 1}</span>
                   <span className="flex-1 text-sm">{z}</span>
                   <button
                     type="button"
@@ -209,18 +209,18 @@ export function Configuracion() {
         )}
       </section>
 
-      <section className="tarjeta space-y-2">
-        <h2 className="text-lg font-bold">Semillas de historial externo</h2>
-        <p className="text-sm text-stone-600">
+      <section className="panel p-4 space-y-2">
+        <h2 className="text-lg font-semibold">Semillas de historial externo</h2>
+        <p className="text-sm text-acero-500">
           Un mapa <code>itemId → cantidad de informes externos</code> por equipo. Sin esto, la
           primera recorrida propone «nuevo» para hallazgos que ya salieron tres veces.
         </p>
 
         <ul className="space-y-1 text-sm">
           {config.semillas.map((s) => (
-            <li key={s.equipo} className="rounded border border-stone-300 p-2">
+            <li key={s.equipo} className="rounded border border-acero-200 p-2">
               <p className="font-bold">{s.equipo}</p>
-              <p className="text-stone-600">{s.referencia}</p>
+              <p className="text-acero-500">{s.referencia}</p>
               <p>
                 {Object.keys(s.aparicionesPrevias).length} ítem(s) con historial ·{" "}
                 {s.corregidosUltimaInspeccion.length} corregidos
@@ -244,9 +244,9 @@ export function Configuracion() {
         </label>
       </section>
 
-      <section className="tarjeta space-y-2">
-        <h2 className="text-lg font-bold">Backup local</h2>
-        <p className="text-sm text-stone-600">
+      <section className="panel p-4 space-y-2">
+        <h2 className="text-lg font-semibold">Backup local</h2>
+        <p className="text-sm text-acero-500">
           El respaldo real es SharePoint. Esto es una copia del storage del dispositivo.
         </p>
         <button

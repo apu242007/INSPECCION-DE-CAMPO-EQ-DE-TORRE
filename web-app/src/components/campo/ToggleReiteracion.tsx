@@ -23,7 +23,12 @@ interface Props {
   onCambio: (origen: Origen, reiteracion: Reiteracion | undefined) => void;
 }
 
-export function ToggleReiteracion({ propuesta, origen, reiteracion, onCambio }: Props) {
+export function ToggleReiteracion({
+  propuesta,
+  origen,
+  reiteracion,
+  onCambio,
+}: Props) {
   const [abierto, setAbierto] = useState(false);
   const [fuente, setFuente] = useState<FuenteReiteracion>("AUDITORIA_EXTERNA");
   const [veces, setVeces] = useState(1);
@@ -48,28 +53,54 @@ export function ToggleReiteracion({ propuesta, origen, reiteracion, onCambio }: 
     }
     // No hay detección automática: hay que preguntar de dónde sale la reiteración.
     setAbierto(true);
-    onCambio("REITERATIVO", combinarConManual(propuesta, { fuente, vecesPrevias: veces, referencia }));
+    onCambio(
+      "REITERATIVO",
+      combinarConManual(propuesta, { fuente, vecesPrevias: veces, referencia }),
+    );
   }
 
-  function aplicarManual(cambios: { fuente?: FuenteReiteracion; veces?: number; referencia?: string }) {
+  function aplicarManual(cambios: {
+    fuente?: FuenteReiteracion;
+    veces?: number;
+    referencia?: string;
+  }) {
     const f = cambios.fuente ?? fuente;
     const v = cambios.veces ?? veces;
     const ref = cambios.referencia ?? referencia;
     setFuente(f);
     setVeces(v);
     setReferencia(ref);
-    onCambio("REITERATIVO", combinarConManual(propuesta, { fuente: f, vecesPrevias: v, referencia: ref }));
+    onCambio(
+      "REITERATIVO",
+      combinarConManual(propuesta, {
+        fuente: f,
+        vecesPrevias: v,
+        referencia: ref,
+      }),
+    );
   }
 
   return (
     <div className="space-y-3">
-      <p className="text-sm font-bold uppercase text-stone-600">¿Es nuevo o ya venía de antes?</p>
+      <p className="text-sm font-semibold text-acero-700">
+        ¿Es nuevo o ya venía de antes?
+      </p>
 
+      {/*
+        Sin seleccionar va contorneado; seleccionado, relleno sólido. NO se usa el modificador
+        de opacidad de Tailwind (`bg-x/60`): con colores definidos como var(--x) la regla se
+        descarta y el botón queda invisible. Además, a pleno sol un relleno lavado no se
+        distingue de uno sólido: el contorno sí.
+      */}
       <div className="grid grid-cols-2 gap-3">
         <button
           type="button"
           aria-pressed={esNuevo}
-          className={`boton-estado ${esNuevo ? "bg-blue-700 ring-4 ring-stone-900 ring-offset-2" : "bg-blue-700/60"}`}
+          className={`boton-estado ${
+            esNuevo
+              ? "bg-nuevo"
+              : "border-2 border-nuevo bg-papel text-nuevo-ink"
+          }`}
           onClick={elegirNuevo}
         >
           Nuevo
@@ -78,7 +109,9 @@ export function ToggleReiteracion({ propuesta, origen, reiteracion, onCambio }: 
           type="button"
           aria-pressed={esReiterativo}
           className={`boton-estado ${
-            esReiterativo ? "bg-violet-700 ring-4 ring-stone-900 ring-offset-2" : "bg-violet-700/60"
+            esReiterativo
+              ? "bg-reiterado"
+              : "border-2 border-reiterado bg-papel text-reiterado-ink"
           }`}
           onClick={elegirReiterativo}
         >
@@ -87,7 +120,7 @@ export function ToggleReiteracion({ propuesta, origen, reiteracion, onCambio }: 
         </button>
       </div>
 
-      <div className="rounded border border-stone-300 bg-stone-100 p-3 text-sm">
+      <div className="rounded border border-acero-200 bg-acero-50 p-3 text-sm">
         <span className="font-bold">Propuesta de la app: </span>
         {propuesta.origen === "REITERATIVO" ? "Reiterativo" : "Nuevo"}
         {". "}
@@ -95,29 +128,34 @@ export function ToggleReiteracion({ propuesta, origen, reiteracion, onCambio }: 
       </div>
 
       {esReiterativo && reiteracion?.detectadaAutomaticamente && (
-        <p className="text-sm text-stone-700">
-          🔎 Reiteración detectada automáticamente · fuente: {ETIQUETA_FUENTE[reiteracion.fuente]}
+        <p className="text-sm text-acero-700">
+          🔎 Reiteración detectada automáticamente · fuente:{" "}
+          {ETIQUETA_FUENTE[reiteracion.fuente]}
         </p>
       )}
 
       {esReiterativo && (
         <button
           type="button"
-          className="text-sm font-bold underline"
+          className="text-sm font-semibold underline"
           onClick={() => setAbierto((v) => !v)}
         >
-          {abierto ? "Ocultar detalle" : "Agregar una auditoría externa que la app no tiene"}
+          {abierto
+            ? "Ocultar detalle"
+            : "Agregar una auditoría externa que la app no tiene"}
         </button>
       )}
 
       {esReiterativo && abierto && (
-        <div className="space-y-3 rounded border-2 border-violet-700 p-3">
-          <label className="block text-sm font-bold">
+        <div className="space-y-3 rounded border-2 border-reiterado p-3">
+          <label className="etiqueta">
             Fuente
             <select
               className="campo mt-1"
               value={fuente}
-              onChange={(e) => aplicarManual({ fuente: e.target.value as FuenteReiteracion })}
+              onChange={(e) =>
+                aplicarManual({ fuente: e.target.value as FuenteReiteracion })
+              }
             >
               <option value="RECORRIDA_INTERNA">Recorrida interna</option>
               <option value="AUDITORIA_EXTERNA">Auditoría externa</option>
@@ -125,7 +163,7 @@ export function ToggleReiteracion({ propuesta, origen, reiteracion, onCambio }: 
             </select>
           </label>
 
-          <label className="block text-sm font-bold">
+          <label className="etiqueta">
             Veces previas (además de las que ya detectó la app)
             <input
               type="number"
@@ -133,11 +171,15 @@ export function ToggleReiteracion({ propuesta, origen, reiteracion, onCambio }: 
               min={1}
               className="campo mt-1"
               value={veces}
-              onChange={(e) => aplicarManual({ veces: Math.max(1, Number(e.target.value) || 1) })}
+              onChange={(e) =>
+                aplicarManual({
+                  veces: Math.max(1, Number(e.target.value) || 1),
+                })
+              }
             />
           </label>
 
-          <label className="block text-sm font-bold">
+          <label className="etiqueta">
             Referencia
             <input
               type="text"

@@ -72,13 +72,13 @@ export function CapturaFoto({ itemId, fotos, onCambio, onListo, textoListo = "Li
               <img
                 src={previews[i]}
                 alt={`Evidencia ${i + 1} del ítem ${itemId}`}
-                className="h-24 w-full rounded border-2 border-stone-400 object-cover"
+                className="h-24 w-full rounded border-2 border-acero-300 object-cover"
               />
               <button
                 type="button"
                 aria-label={`Quitar la foto ${i + 1}`}
                 className="absolute right-1 top-1 flex h-8 w-8 items-center justify-center
-                           rounded-full bg-stone-900 text-lg font-bold text-white"
+                           rounded-full bg-acero-900 text-lg font-semibold text-white"
                 onClick={() => onCambio(fotos.filter((x) => x.id !== f.id))}
               >
                 ×
@@ -112,7 +112,7 @@ export function CapturaFoto({ itemId, fotos, onCambio, onListo, textoListo = "Li
       )}
 
       {sinFotos && !compacto && (
-        <p className="text-center text-sm font-bold text-noOk">
+        <p className="text-center text-sm font-semibold text-critico-ink">
           Sin foto no se puede guardar este ítem.
         </p>
       )}

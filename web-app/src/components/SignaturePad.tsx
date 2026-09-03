@@ -167,10 +167,10 @@ export function SignaturePad({ titulo, valor, onChange, deshabilitado }: Props) 
   return (
     <div className="space-y-2">
       {/* El título es un div, NO un label: envolver el canvas lo mata en táctil. */}
-      <div className="text-base font-bold">{titulo}</div>
+      <div className="text-base font-semibold">{titulo}</div>
       <canvas
         ref={canvasRef}
-        className="h-40 w-full rounded-lg border-2 border-stone-400 bg-white"
+        className="h-40 w-full rounded-lg border-2 border-acero-300 bg-white"
         style={{ touchAction: "none" }}
         onPointerDown={abajo}
         onPointerMove={mover}

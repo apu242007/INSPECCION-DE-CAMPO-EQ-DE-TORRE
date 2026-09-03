@@ -2,16 +2,22 @@ import type { Estado } from "../../types";
 import { vibrar } from "../../ui";
 
 /**
- * Los cuatro botones de estado, apilados en la mitad inferior (zona del pulgar).
- * Alto >= 72px, ancho completo, texto >= 18px, sin dropdowns ni iconos chicos:
- * se opera con una mano, con guantes, colgado del mástil.
+ * Los cuatro estados como controles de un tablero de comando.
+ *
+ * Restricciones que no se negocian, porque vienen del uso y no del gusto:
+ *   - 72 px de alto y ancho completo: se opera con guantes, con una mano, colgado del mástil.
+ *   - Sin hover, sin dropdown, sin ícono chico: en campo no hay puntero y no se afina la vista.
+ *   - El seleccionado se marca con un anillo grueso, no con un tinte: a pleno sol un tinte
+ *     suave desaparece.
+ *
+ * En horizontal pasan a 2x2 y en tablet/escritorio a una fila de cuatro (ver .grid-estados).
  */
 
 const OPCIONES: { estado: Estado; texto: string; clase: string }[] = [
-  { estado: "OK", texto: "OK", clase: "bg-ok" },
-  { estado: "NO_OK", texto: "NO OK", clase: "bg-noOk" },
-  { estado: "EN_PROC", texto: "EN PROC", clase: "bg-enProc" },
-  { estado: "NA", texto: "N/A", clase: "bg-na" },
+  { estado: "OK", texto: "OK", clase: "bg-conforme" },
+  { estado: "NO_OK", texto: "NO OK", clase: "bg-critico" },
+  { estado: "EN_PROC", texto: "En proceso", clase: "bg-mayor" },
+  { estado: "NA", texto: "N/A", clase: "bg-general" },
 ];
 
 interface Props {
@@ -22,7 +28,7 @@ interface Props {
 
 export function BotonesEstado({ actual, onElegir, deshabilitado }: Props) {
   return (
-    <div className="grid gap-3">
+    <div className="grid-estados">
       {OPCIONES.map((o) => {
         const seleccionado = actual === o.estado;
         return (
@@ -30,17 +36,20 @@ export function BotonesEstado({ actual, onElegir, deshabilitado }: Props) {
             key={o.estado}
             type="button"
             aria-pressed={seleccionado}
+            aria-label={`Marcar como ${o.texto}`}
             disabled={deshabilitado}
-            className={`boton-estado ${o.clase} ${
-              seleccionado ? "ring-4 ring-stone-900 ring-offset-2" : ""
-            }`}
+            className={`boton-estado ${o.clase}`}
             onClick={() => {
               vibrar();
               onElegir(o.estado);
             }}
           >
             {o.texto}
-            {seleccionado && <span className="ml-2 text-2xl leading-none">✓</span>}
+            {seleccionado && (
+              <span aria-hidden className="text-2xl leading-none">
+                ✓
+              </span>
+            )}
           </button>
         );
       })}

@@ -96,21 +96,21 @@ export function NuevaRecorrida() {
   }
 
   return (
-    <div className="space-y-3 p-3">
-      <h1 className="text-2xl font-bold">
+    <div className="mx-auto w-full max-w-4xl space-y-4 p-3 md:p-6">
+      <h1 className="text-2xl font-semibold">
         {duplicarDe ? "Duplicar recorrida" : "Nueva recorrida"}
       </h1>
 
       {duplicarDe && (
-        <p className="tarjeta text-sm">
+        <p className="panel p-4 text-sm">
           Se arrastran responsable, plazo y acción correctiva de los ítems que quedaron NO OK o en
           proceso. <strong>No se arrastran las fotos</strong>: la evidencia de una recorrida no vale
           como evidencia de la siguiente, así que esos ítems quedan sin revisar.
         </p>
       )}
 
-      <div className="tarjeta grid gap-3 sm:grid-cols-2">
-        <label className="block text-sm font-bold">
+      <div className="panel p-4 grid gap-3 sm:grid-cols-2">
+        <label className="etiqueta">
           Equipo *
           <input
             className="campo mt-1"
@@ -127,12 +127,12 @@ export function NuevaRecorrida() {
           </datalist>
         </label>
 
-        <label className="block text-sm font-bold">
+        <label className="etiqueta">
           Empresa
           <input className="campo mt-1" value={empresa} onChange={(e) => setEmpresa(e.target.value)} />
         </label>
 
-        <label className="block text-sm font-bold">
+        <label className="etiqueta">
           Operadora
           <select className="campo mt-1" value={operadora} onChange={(e) => setOperadora(e.target.value)}>
             <option value="">—</option>
@@ -144,12 +144,12 @@ export function NuevaRecorrida() {
           </select>
         </label>
 
-        <label className="block text-sm font-bold">
+        <label className="etiqueta">
           Contrato
           <input className="campo mt-1" value={contrato} onChange={(e) => setContrato(e.target.value)} />
         </label>
 
-        <label className="block text-sm font-bold">
+        <label className="etiqueta">
           Fecha de relevamiento
           <input
             type="datetime-local"
@@ -159,12 +159,12 @@ export function NuevaRecorrida() {
           />
         </label>
 
-        <label className="block text-sm font-bold">
+        <label className="etiqueta">
           Pozo / locación *
           <input className="campo mt-1" value={pozo} onChange={(e) => setPozo(e.target.value)} placeholder="LACH-197" />
         </label>
 
-        <label className="block text-sm font-bold">
+        <label className="etiqueta">
           Auditoría externa programada
           <input
             type="date"
@@ -174,12 +174,12 @@ export function NuevaRecorrida() {
           />
         </label>
 
-        <label className="block text-sm font-bold">
+        <label className="etiqueta">
           Company Representative
           <input className="campo mt-1" value={cr} onChange={(e) => setCr(e.target.value)} />
         </label>
 
-        <label className="block text-sm font-bold sm:col-span-2">
+        <label className="etiqueta sm:col-span-2">
           Quiénes recorren *
           <input
             className="campo mt-1"
@@ -189,7 +189,7 @@ export function NuevaRecorrida() {
           />
         </label>
 
-        <label className="block text-sm font-bold sm:col-span-2">
+        <label className="etiqueta sm:col-span-2">
           Notas / limitaciones de la recorrida
           <textarea
             className="campo mt-1"
@@ -202,8 +202,8 @@ export function NuevaRecorrida() {
       </div>
 
       {semilla && (
-        <div className="tarjeta space-y-2 border-violet-700">
-          <p className="text-base font-bold">Hay una semilla de historial para este equipo</p>
+        <div className="panel p-4 space-y-2 border-reiterado">
+          <p className="text-base font-semibold">Hay una semilla de historial para este equipo</p>
           <p className="text-sm">{semilla.referencia}</p>
           <p className="text-sm">
             {Object.keys(semilla.aparicionesPrevias).length} ítem(s) con apariciones previas en
@@ -225,7 +225,7 @@ export function NuevaRecorrida() {
       )}
 
       {pendientes.length > 0 && (
-        <div className="rounded-lg border-2 border-enProc bg-orange-50 p-3">
+        <div className="rounded-lg border-2 border-mayor-ink bg-mayor-suave p-3">
           <p className="font-bold">Falta completar:</p>
           <ul className="ml-5 list-disc text-sm">
             {pendientes.map((p) => (

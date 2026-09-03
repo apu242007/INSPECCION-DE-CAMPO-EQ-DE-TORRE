@@ -53,16 +53,16 @@ export function SyncPanel({ recorrida, onEnviar, enviando, onCambio }: Props) {
   const demo = esModoDemo("EQT01");
 
   return (
-    <section className="tarjeta space-y-3">
+    <section className="panel p-4 space-y-3">
       <div className="flex flex-wrap items-center gap-2">
-        <h3 className="flex-1 text-lg font-bold">Sincronización con SharePoint</h3>
-        <span className={`badge ${online ? "bg-ok" : "bg-stone-500"}`}>
+        <h3 className="flex-1 text-lg font-semibold">Sincronización con SharePoint</h3>
+        <span className={`badge ${online ? "bg-conforme" : "bg-acero-500"}`}>
           {online ? "CON SEÑAL" : "SIN SEÑAL"}
         </span>
       </div>
 
       {demo && (
-        <p className="rounded border-2 border-enProc bg-orange-50 p-3 text-sm font-bold">
+        <p className="rounded border-2 border-mayor-ink bg-mayor-suave p-3 text-sm font-semibold">
           Modo demo: no hay URL de flujo configurada. La app valida y arma el payload, lo
           imprime en la consola, pero <strong>no envía nada</strong>.
         </p>
@@ -70,30 +70,30 @@ export function SyncPanel({ recorrida, onEnviar, enviando, onCambio }: Props) {
 
       <dl className="grid grid-cols-2 gap-2 text-sm">
         <div>
-          <dt className="font-bold uppercase text-stone-600">Registro en SharePoint</dt>
+          <dt className="font-semibold text-acero-700">Registro en SharePoint</dt>
           <dd>{recorrida.sharepointId ? `ID ${recorrida.sharepointId}` : "todavía no creado"}</dd>
         </div>
         <div>
-          <dt className="font-bold uppercase text-stone-600">Ítems con fotos</dt>
+          <dt className="font-semibold text-acero-700">Ítems con fotos</dt>
           <dd>
             {subidos} de {conFotos} subidos
-            {enError > 0 && <span className="ml-1 font-bold text-noOk">· {enError} con error</span>}
+            {enError > 0 && <span className="ml-1 font-bold text-critico-ink">· {enError} con error</span>}
           </dd>
         </div>
         {estado && (
           <div>
-            <dt className="font-bold uppercase text-stone-600">Enviado</dt>
+            <dt className="font-semibold text-acero-700">Enviado</dt>
             <dd>{formatearTamaño(estado.bytesEnviados)}</dd>
           </div>
         )}
         <div>
-          <dt className="font-bold uppercase text-stone-600">En cola</dt>
+          <dt className="font-semibold text-acero-700">En cola</dt>
           <dd>{pendientes}</dd>
         </div>
       </dl>
 
       {estado?.ultimoError && (
-        <p className="rounded border-2 border-noOk bg-red-50 p-3 text-sm">
+        <p className="rounded border-2 border-critico-ink bg-critico-suave p-3 text-sm">
           <strong>Último error:</strong> {estado.ultimoError}
         </p>
       )}
@@ -131,7 +131,7 @@ export function SyncPanel({ recorrida, onEnviar, enviando, onCambio }: Props) {
       </div>
 
       {!online && !demo && (
-        <p className="text-sm text-stone-600">
+        <p className="text-sm text-acero-500">
           Sin señal no se envía nada, y está bien: la recorrida queda guardada en el teléfono y la
           cola se retoma sola cuando vuelva la conexión.
         </p>

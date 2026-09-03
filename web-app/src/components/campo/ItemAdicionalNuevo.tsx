@@ -80,27 +80,27 @@ export function ItemAdicionalNuevo({
         className="mx-auto max-w-xl space-y-3 p-3 pb-24"
       >
         <div className="flex items-center justify-between">
-          <h2 className="text-xl font-bold">Ítem detectado</h2>
-          <button type="button" className="text-base font-bold underline" onClick={onCancelar}>
+          <h2 className="text-xl font-semibold">Ítem detectado</h2>
+          <button type="button" className="text-base font-semibold underline" onClick={onCancelar}>
             Cancelar
           </button>
         </div>
 
-        <div className="tarjeta space-y-3">
-          <p className="text-base font-bold">1 · Foto (obligatoria)</p>
+        <div className="panel p-4 space-y-3">
+          <p className="text-base font-semibold">1 · Foto (obligatoria)</p>
           <CapturaFoto itemId={siguienteId} fotos={fotos} onCambio={setFotos} compacto />
         </div>
 
-        <div className="tarjeta space-y-2">
-          <p className="text-base font-bold">2 · Zona</p>
+        <div className="panel p-4 space-y-2">
+          <p className="text-base font-semibold">2 · Zona</p>
           <div className="grid grid-cols-2 gap-2">
             {ZONAS.map((z) => (
               <button
                 key={z}
                 type="button"
                 aria-pressed={zona === z}
-                className={`min-h-[56px] rounded-lg border-2 px-2 text-sm font-bold ${
-                  zona === z ? "border-stone-900 bg-stone-900 text-white" : "border-stone-400 bg-white"
+                className={`min-h-[56px] rounded-lg border-2 px-2 text-sm font-semibold ${
+                  zona === z ? "border-acero-900 bg-acero-900 text-white" : "border-acero-300 bg-white"
                 }`}
                 onClick={() => setZona(z)}
               >
@@ -110,8 +110,8 @@ export function ItemAdicionalNuevo({
           </div>
         </div>
 
-        <div className="tarjeta space-y-2">
-          <p className="text-base font-bold">3 · Criticidad</p>
+        <div className="panel p-4 space-y-2">
+          <p className="text-base font-semibold">3 · Criticidad</p>
           <div className="grid grid-cols-2 gap-2">
             {CRITICIDADES.map((c) => (
               <button
@@ -119,7 +119,7 @@ export function ItemAdicionalNuevo({
                 type="button"
                 aria-pressed={criticidad === c}
                 className={`boton-estado ${CLASE_CRITICIDAD[c]} ${
-                  criticidad === c ? "ring-4 ring-stone-900 ring-offset-2" : "opacity-60"
+                  criticidad === c ? "ring-4 ring-acero-900 ring-offset-2" : "opacity-60"
                 }`}
                 onClick={() => setCriticidad(c)}
               >
@@ -129,8 +129,8 @@ export function ItemAdicionalNuevo({
           </div>
         </div>
 
-        <div className="tarjeta space-y-2">
-          <p className="text-base font-bold">4 · Qué se detectó</p>
+        <div className="panel p-4 space-y-2">
+          <p className="text-base font-semibold">4 · Qué se detectó</p>
           <textarea
             className="campo"
             rows={3}
@@ -152,13 +152,13 @@ export function ItemAdicionalNuevo({
         </div>
 
         {!puedeGuardar && (
-          <p className="rounded border-2 border-enProc bg-orange-50 p-3 text-sm font-bold">
+          <p className="rounded border-2 border-mayor-ink bg-mayor-suave p-3 text-sm font-semibold">
             Falta: {[sinFoto && "una foto", sinDescripcion && "la descripción"].filter(Boolean).join(" y ")}.
           </p>
         )}
       </div>
 
-      <div className="sticky bottom-0 border-t-2 border-stone-300 bg-white p-3">
+      <div className="sticky bottom-0 border-t-2 border-acero-200 bg-white p-3">
         <button type="button" className="boton-primario" disabled={!puedeGuardar} onClick={guardar}>
           {sinFoto ? "Falta foto" : "Guardar ítem detectado"}
         </button>

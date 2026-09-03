@@ -70,7 +70,7 @@ export function NotaVoz({ itemId, nota, texto, onNota, onTexto }: Props) {
         <div className="flex gap-2">
           <button
             type="button"
-            className={`boton-secundario flex-1 ${grabando ? "border-noOk text-noOk" : ""}`}
+            className={`boton-secundario flex-1 ${grabando ? "border-critico-ink text-critico-ink" : ""}`}
             onClick={() => (grabando ? frenar() : void arrancar())}
           >
             {grabando ? "⏹ Frenar grabación" : "🎤 Nota de voz"}

@@ -5,8 +5,6 @@ import {
   CartesianGrid,
   Cell,
   Legend,
-  Pie,
-  PieChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -27,6 +25,7 @@ import {
   CLASE_SEMAFORO,
   COLOR_ESTADO,
   ETIQUETA_CRITICIDAD,
+  EXPLICACION_SEMAFORO,
   fechaSoloDia,
 } from "../ui";
 
@@ -59,38 +58,32 @@ export function Dashboard({ recorrida, catalogo, historial, onAbrirItem }: Props
   ].filter((d) => d.valor > 0);
 
   return (
-    <div className="space-y-4 p-3">
+    <div className="space-y-4">
       <div className={`rounded-lg p-4 text-white ${CLASE_SEMAFORO[semaforo]}`}>
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <span className="text-2xl font-bold">SEMÁFORO {semaforo}</span>
-          <span className="text-xl font-bold">{kpis.pctAvance}% de avance</span>
+          <span className="text-2xl font-semibold">SEMÁFORO {semaforo}</span>
+          <span className="text-xl font-semibold">{kpis.pctAvance}% de avance</span>
         </div>
-        <p className="mt-1 text-sm opacity-90">
-          {semaforo === "ROJO"
-            ? "Hay hallazgos críticos (o mayores escalados) abiertos, o ítems críticos sin revisar."
-            : semaforo === "AMARILLO"
-              ? "Hay hallazgos mayores abiertos."
-              : "Todos los ítems están conformes o no aplican."}
-        </p>
+        <p className="mt-1 text-sm opacity-90">{EXPLICACION_SEMAFORO[semaforo]}</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-8">
         <Kpi titulo="Total" valor={kpis.total} />
-        <Kpi titulo="OK" valor={kpis.ok} color="text-ok" />
-        <Kpi titulo="NO OK" valor={kpis.noOk} color="text-noOk" />
-        <Kpi titulo="En proceso" valor={kpis.enProc} color="text-enProc" />
+        <Kpi titulo="OK" valor={kpis.ok} color="text-conforme-ink" />
+        <Kpi titulo="NO OK" valor={kpis.noOk} color="text-critico-ink" />
+        <Kpi titulo="En proceso" valor={kpis.enProc} color="text-mayor-ink" />
         <Kpi titulo="N/A" valor={kpis.na} />
         <Kpi titulo="Sin revisar" valor={kpis.sinRevisar} />
-        <Kpi titulo="Nuevos" valor={kpis.noOkNuevos} color="text-blue-700" />
-        <Kpi titulo="Reiterativos" valor={kpis.noOkReiterativos} color="text-violet-700" />
+        <Kpi titulo="Nuevos" valor={kpis.noOkNuevos} color="text-nuevo-ink" />
+        <Kpi titulo="Reiterativos" valor={kpis.noOkReiterativos} color="text-reiterado-ink" />
       </div>
 
       {(diasAuditoria !== null || kpis.escalados > 0) && (
         <div className="grid gap-2 sm:grid-cols-2">
           {diasAuditoria !== null && (
-            <div className="tarjeta">
-              <p className="text-sm font-bold uppercase text-stone-600">Auditoría programada</p>
-              <p className="text-2xl font-bold">
+            <div className="panel p-4">
+              <p className="text-sm font-semibold text-acero-700">Auditoría programada</p>
+              <p className="text-2xl font-semibold">
                 {diasAuditoria < 0
                   ? `Pasó hace ${Math.abs(diasAuditoria)} día(s)`
                   : `Faltan ${diasAuditoria} día(s)`}
@@ -99,9 +92,9 @@ export function Dashboard({ recorrida, catalogo, historial, onAbrirItem }: Props
             </div>
           )}
           {kpis.escalados > 0 && (
-            <div className="tarjeta border-critica">
-              <p className="text-sm font-bold uppercase text-noOk">Escalados a crítico</p>
-              <p className="text-2xl font-bold text-noOk">{kpis.escalados}</p>
+            <div className="panel p-4 border-critico">
+              <p className="text-sm font-semibold text-critico-ink">Escalados a crítico</p>
+              <p className="text-2xl font-semibold text-critico-ink">{kpis.escalados}</p>
               <p className="text-sm">MAYOR con plazo vencido sin cerrar (regla YPF).</p>
             </div>
           )}
@@ -109,8 +102,8 @@ export function Dashboard({ recorrida, catalogo, historial, onAbrirItem }: Props
       )}
 
       {/* ------------------------------------------------------------ gráficos */}
-      <section className="tarjeta">
-        <h3 className="mb-2 text-lg font-bold">Estado por zona</h3>
+      <section className="panel p-4">
+        <h3 className="mb-2 text-lg font-semibold">Estado por zona</h3>
         <div className="tabla-scroll">
           <div style={{ minWidth: 640, height: 320 }}>
             <ResponsiveContainer width="100%" height="100%">
@@ -131,9 +124,9 @@ export function Dashboard({ recorrida, catalogo, historial, onAbrirItem }: Props
         </div>
       </section>
 
-      <div className="grid gap-3 lg:grid-cols-2">
-        <section className="tarjeta">
-          <h3 className="mb-2 text-lg font-bold">No conformes por criticidad</h3>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <section className="panel p-4">
+          <h3 className="mb-2 text-lg font-semibold">No conformes por criticidad</h3>
           <div style={{ height: 240 }}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={datosCriticidad}>
@@ -151,40 +144,65 @@ export function Dashboard({ recorrida, catalogo, historial, onAbrirItem }: Props
           </div>
         </section>
 
-        <section className="tarjeta">
-          <h3 className="mb-2 text-lg font-bold">Nuevos vs reiterativos</h3>
+        <section className="panel p-4">
+          <h3 className="mb-3 text-lg font-semibold">Nuevos y reiterativos</h3>
           {datosOrigen.length === 0 ? (
-            <p className="py-16 text-center text-stone-600">Todavía no hay hallazgos.</p>
+            <p className="py-12 text-center text-acero-500">Todavía no hay hallazgos.</p>
+          ) : datosOrigen.length === 1 ? (
+            /* Una torta de una sola porción es un círculo lleno: no informa nada. */
+            <p className="py-10 text-center">
+              <span className="kpi-valor block text-4xl font-semibold">{datosOrigen[0].valor}</span>
+              <span className="text-acero-700">
+                {datosOrigen[0].nombre.toLowerCase()}, ninguno{" "}
+                {datosOrigen[0].nombre === "Nuevos" ? "reiterativo" : "nuevo"}
+              </span>
+            </p>
           ) : (
-            <div style={{ height: 240 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie data={datosOrigen} dataKey="valor" nameKey="nombre" label outerRadius={80}>
-                    {datosOrigen.map((d) => (
-                      <Cell key={d.nombre} fill={d.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
+            <>
+              <div className="flex h-8 overflow-hidden rounded">
+                {datosOrigen.map((d) => (
+                  <div
+                    key={d.nombre}
+                    className="flex items-center justify-center text-sm font-semibold text-white"
+                    style={{
+                      width: `${(d.valor / datosOrigen.reduce((a, x) => a + x.valor, 0)) * 100}%`,
+                      background: d.color,
+                    }}
+                  >
+                    {d.valor}
+                  </div>
+                ))}
+              </div>
+              <ul className="mt-3 space-y-1 text-sm">
+                {datosOrigen.map((d) => (
+                  <li key={d.nombre} className="flex items-center gap-2">
+                    <span
+                      aria-hidden
+                      className="h-3 w-3 rounded-sm"
+                      style={{ background: d.color }}
+                    />
+                    <span className="flex-1">{d.nombre}</span>
+                    <span className="cifras font-semibold">{d.valor}</span>
+                  </li>
+                ))}
+              </ul>
+            </>
           )}
         </section>
       </div>
 
       {/* ------------------------------------------------------------ prioridad */}
-      <section className="tarjeta">
-        <h3 className="mb-2 text-lg font-bold">Prioridad de resolución</h3>
+      <section className="panel p-4">
+        <h3 className="mb-2 text-lg font-semibold">Prioridad de resolución</h3>
         {prioridad.length === 0 ? (
-          <p className="text-stone-600">No hay hallazgos abiertos.</p>
+          <p className="text-acero-500">No hay hallazgos abiertos.</p>
         ) : (
           agruparPorNivel(prioridad).map((grupo) => (
             <div key={grupo.nivel} className="mb-3">
-              <p className="mb-1 text-sm font-bold uppercase text-stone-600">
+              <p className="mb-1 text-sm font-semibold text-acero-700">
                 {grupo.nivel}. {grupo.etiqueta} ({grupo.items.length})
               </p>
-              <ul className="divide-y divide-stone-200 rounded border border-stone-200">
+              <ul className="divide-y divide-acero-200 rounded border border-acero-200">
                 {grupo.items.map((i) => (
                   <li key={i.itemId}>
                     <button
@@ -195,13 +213,13 @@ export function Dashboard({ recorrida, catalogo, historial, onAbrirItem }: Props
                       <span className={`badge ${CLASE_CRITICIDAD[i.criticidad]}`}>
                         {ETIQUETA_CRITICIDAD[i.criticidad]}
                       </span>
-                      <span className="text-sm font-bold">#{i.itemId}</span>
+                      <span className="text-sm font-semibold">#{i.itemId}</span>
                       {i.vecesPrevias > 0 && (
-                        <span className="badge bg-violet-700">×{i.vecesPrevias}</span>
+                        <span className="badge bg-reiterado">×{i.vecesPrevias}</span>
                       )}
-                      {i.escalado && <span className="badge bg-critica">ESCALADO</span>}
+                      {i.escalado && <span className="badge bg-critico">ESCALADO</span>}
                       <span className="flex-1 text-sm">{i.item}</span>
-                      {i.plazo && <span className="text-xs text-stone-600">{fechaSoloDia(i.plazo)}</span>}
+                      {i.plazo && <span className="text-xs text-acero-500">{fechaSoloDia(i.plazo)}</span>}
                     </button>
                   </li>
                 ))}
@@ -212,15 +230,15 @@ export function Dashboard({ recorrida, catalogo, historial, onAbrirItem }: Props
       </section>
 
       {/* ------------------------------------------------------------ vencimientos */}
-      <section className="tarjeta">
-        <h3 className="mb-2 text-lg font-bold">Vencimientos (vencidos y ≤ 7 días)</h3>
+      <section className="panel p-4">
+        <h3 className="mb-2 text-lg font-semibold">Vencimientos (vencidos y ≤ 7 días)</h3>
         {vencs.length === 0 ? (
-          <p className="text-stone-600">Sin vencimientos próximos.</p>
+          <p className="text-acero-500">Sin vencimientos próximos.</p>
         ) : (
           <div className="tabla-scroll">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b-2 border-stone-300 text-left">
+                <tr className="border-b-2 border-acero-200 text-left">
                   <th className="p-2">#</th>
                   <th className="p-2">Criticidad</th>
                   <th className="p-2">Plazo</th>
@@ -230,9 +248,9 @@ export function Dashboard({ recorrida, catalogo, historial, onAbrirItem }: Props
               </thead>
               <tbody>
                 {vencs.map((v) => (
-                  <tr key={v.itemId} className={v.vencido ? "bg-red-50" : ""}>
+                  <tr key={v.itemId} className={v.vencido ? "bg-critico-suave" : ""}>
                     <td className="p-2">
-                      <button className="font-bold underline" onClick={() => onAbrirItem(v.itemId)}>
+                      <button className="font-semibold underline" onClick={() => onAbrirItem(v.itemId)}>
                         #{v.itemId}
                       </button>
                     </td>
@@ -240,10 +258,10 @@ export function Dashboard({ recorrida, catalogo, historial, onAbrirItem }: Props
                       <span className={`badge ${CLASE_CRITICIDAD[v.criticidad]}`}>
                         {ETIQUETA_CRITICIDAD[v.criticidad]}
                       </span>
-                      {v.escalado && <span className="badge ml-1 bg-critica">ESCALADO</span>}
+                      {v.escalado && <span className="badge ml-1 bg-critico">ESCALADO</span>}
                     </td>
                     <td className="p-2">{fechaSoloDia(v.plazo)}</td>
-                    <td className={`p-2 font-bold ${v.vencido ? "text-noOk" : ""}`}>
+                    <td className={`p-2 font-bold ${v.vencido ? "text-critico-ink" : ""}`}>
                       {v.vencido ? `vencido hace ${Math.abs(v.dias)}` : `en ${v.dias}`}
                     </td>
                     <td className="p-2">{v.responsable ?? "—"}</td>
@@ -257,8 +275,8 @@ export function Dashboard({ recorrida, catalogo, historial, onAbrirItem }: Props
 
       {/* ------------------------------------------------------------ histórico */}
       {historial.length > 0 && (
-        <section className="tarjeta">
-          <h3 className="mb-2 text-lg font-bold">Histórico del equipo {recorrida.equipo}</h3>
+        <section className="panel p-4">
+          <h3 className="mb-2 text-lg font-semibold">Histórico del equipo {recorrida.equipo}</h3>
 
           <div style={{ height: 220 }}>
             <ResponsiveContainer width="100%" height="100%">
@@ -272,11 +290,11 @@ export function Dashboard({ recorrida, catalogo, historial, onAbrirItem }: Props
             </ResponsiveContainer>
           </div>
 
-          <h4 className="mb-1 mt-3 text-base font-bold">Top 10 ítems más reiterados</h4>
+          <h4 className="mb-1 mt-3 text-base font-semibold">Top 10 ítems más reiterados</h4>
           <ol className="space-y-1 text-sm">
             {equipo.topReiterados.map((t) => (
               <li key={t.itemId} className="flex gap-2">
-                <span className="badge bg-violet-700">×{t.apariciones}</span>
+                <span className="badge bg-reiterado">×{t.apariciones}</span>
                 <button className="flex-1 text-left underline" onClick={() => onAbrirItem(t.itemId)}>
                   #{t.itemId} · {t.zona} — {t.item}
                 </button>
@@ -284,7 +302,7 @@ export function Dashboard({ recorrida, catalogo, historial, onAbrirItem }: Props
             ))}
           </ol>
 
-          <h4 className="mb-1 mt-3 text-base font-bold">Zonas con más hallazgos</h4>
+          <h4 className="mb-1 mt-3 text-base font-semibold">Zonas con más hallazgos</h4>
           <ul className="text-sm">
             {equipo.zonasConMasHallazgos.slice(0, 6).map((z) => (
               <li key={z.nombre}>
@@ -300,9 +318,9 @@ export function Dashboard({ recorrida, catalogo, historial, onAbrirItem }: Props
 
 function Kpi({ titulo, valor, color }: { titulo: string; valor: number; color?: string }) {
   return (
-    <div className="tarjeta text-center">
-      <p className="text-xs font-bold uppercase text-stone-600">{titulo}</p>
-      <p className={`text-3xl font-bold ${color ?? ""}`}>{valor}</p>
+    <div className="panel px-3 py-3">
+      <p className={`kpi-valor text-3xl font-semibold leading-none ${color ?? ""}`}>{valor}</p>
+      <p className="mt-1.5 text-sm leading-tight text-acero-700">{titulo}</p>
     </div>
   );
 }

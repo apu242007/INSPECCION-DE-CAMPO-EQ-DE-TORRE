@@ -37,7 +37,7 @@ export function DetalleItem({ ctx, recorrida, itemId, responsablesFrecuentes, on
 
   if (!registro || !info) {
     return (
-      <div className="tarjeta">
+      <div className="panel p-4">
         <p>No se encontró el ítem #{itemId}.</p>
         <button className="boton-secundario mt-2" onClick={onCerrar}>
           Cerrar
@@ -57,14 +57,14 @@ export function DetalleItem({ ctx, recorrida, itemId, responsablesFrecuentes, on
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-base font-bold text-stone-500">#{itemId}</span>
+        <span className="text-base font-semibold text-acero-500">#{itemId}</span>
         <span className={`badge ${CLASE_CRITICIDAD[criticidad]}`}>
           {ETIQUETA_CRITICIDAD[criticidad]}
         </span>
         <span className={`badge ${CLASE_ESTADO[registro.estado]}`}>
           {ETIQUETA_ESTADO[registro.estado]}
         </span>
-        <span className="text-sm text-stone-600">{info.zona}</span>
+        <span className="text-sm text-acero-500">{info.zona}</span>
         <button
           type="button"
           className="ml-auto boton-secundario min-h-[40px] px-3 text-sm"
@@ -80,15 +80,15 @@ export function DetalleItem({ ctx, recorrida, itemId, responsablesFrecuentes, on
       <p className="text-base leading-snug">{info.item}</p>
 
       {ayuda && (
-        <div className="rounded border-l-4 border-stone-800 bg-stone-100 p-3 text-sm">
+        <div className="rounded border-l-4 border-acero-900 bg-acero-50 p-3 text-sm">
           <p className="font-bold">Cómo se redacta si falla:</p>
           <p className="mt-1">{info.hallazgoTipico}</p>
         </div>
       )}
 
       {!bloqueado && (
-        <details className="tarjeta">
-          <summary className="cursor-pointer text-base font-bold">Cambiar el estado</summary>
+        <details className="panel p-4">
+          <summary className="cursor-pointer text-base font-semibold">Cambiar el estado</summary>
           <div className="mt-3">
             <BotonesEstado
               actual={registro.estado}
@@ -113,10 +113,10 @@ export function DetalleItem({ ctx, recorrida, itemId, responsablesFrecuentes, on
 
       {necesitaFoto && (
         <>
-          <div className="tarjeta space-y-2">
-            <p className="text-base font-bold">
+          <div className="panel p-4 space-y-2">
+            <p className="text-base font-semibold">
               Evidencia ({registro.evidencia.length})
-              {sinFoto && <span className="ml-2 text-noOk">— obligatoria</span>}
+              {sinFoto && <span className="ml-2 text-critico-ink">— obligatoria</span>}
             </p>
             {bloqueado ? (
               <GaleriaSoloLectura fotos={registro.evidencia} />
@@ -131,7 +131,7 @@ export function DetalleItem({ ctx, recorrida, itemId, responsablesFrecuentes, on
           </div>
 
           {!bloqueado && (
-            <div className="tarjeta">
+            <div className="panel p-4">
               <ToggleReiteracion
                 propuesta={ctx.proponer(itemId)}
                 origen={registro.origen}
@@ -145,8 +145,8 @@ export function DetalleItem({ ctx, recorrida, itemId, responsablesFrecuentes, on
         </>
       )}
 
-      <div className="tarjeta grid gap-3 sm:grid-cols-2">
-        <label className="block text-sm font-bold">
+      <div className="panel p-4 grid gap-3 sm:grid-cols-2">
+        <label className="etiqueta">
           Criticidad
           <select
             className="campo mt-1"
@@ -163,7 +163,7 @@ export function DetalleItem({ ctx, recorrida, itemId, responsablesFrecuentes, on
           </select>
         </label>
 
-        <label className="block text-sm font-bold">
+        <label className="etiqueta">
           Responsable
           <input
             className="campo mt-1"
@@ -180,7 +180,7 @@ export function DetalleItem({ ctx, recorrida, itemId, responsablesFrecuentes, on
           </datalist>
         </label>
 
-        <label className="block text-sm font-bold">
+        <label className="etiqueta">
           Plazo
           <div className="mt-1 flex gap-2">
             <input
@@ -210,7 +210,7 @@ export function DetalleItem({ ctx, recorrida, itemId, responsablesFrecuentes, on
           </div>
         </label>
 
-        <label className="block text-sm font-bold">
+        <label className="etiqueta">
           Estado final
           <select
             className="campo mt-1"
@@ -224,7 +224,7 @@ export function DetalleItem({ ctx, recorrida, itemId, responsablesFrecuentes, on
           </select>
         </label>
 
-        <label className="block text-sm font-bold sm:col-span-2">
+        <label className="etiqueta sm:col-span-2">
           Acción correctiva
           <textarea
             className="campo mt-1"
@@ -235,7 +235,7 @@ export function DetalleItem({ ctx, recorrida, itemId, responsablesFrecuentes, on
           />
         </label>
 
-        <label className="block text-sm font-bold sm:col-span-2">
+        <label className="etiqueta sm:col-span-2">
           Observaciones
           <textarea
             className="campo mt-1"
@@ -251,9 +251,9 @@ export function DetalleItem({ ctx, recorrida, itemId, responsablesFrecuentes, on
 }
 
 function GaleriaSoloLectura({ fotos }: { fotos: readonly Foto[] }) {
-  if (fotos.length === 0) return <p className="text-sm text-stone-600">Sin fotos.</p>;
+  if (fotos.length === 0) return <p className="text-sm text-acero-500">Sin fotos.</p>;
   return (
-    <p className="text-sm text-stone-600">
+    <p className="text-sm text-acero-500">
       {fotos.length} foto(s) adjunta(s). La recorrida está cerrada: reabrila para editarlas.
     </p>
   );

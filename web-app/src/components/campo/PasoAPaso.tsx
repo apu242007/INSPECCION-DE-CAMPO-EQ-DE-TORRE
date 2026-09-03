@@ -6,6 +6,7 @@ import type { Estado, Foto, ItemCatalogo, Origen, Recorrida, Reiteracion } from 
 import { CLASE_CRITICIDAD, ETIQUETA_CRITICIDAD, vibrar } from "../../ui";
 import type { UseRecorrida } from "../../hooks/useRecorrida";
 import { ordenarItems } from "../../hooks/useRecorrida";
+import { RielZonas, estadoPorZona } from "../RielZonas";
 import { BotonesEstado } from "./BotonesEstado";
 import { CapturaFoto } from "./CapturaFoto";
 import { NotaVoz } from "./NotaVoz";
@@ -17,10 +18,13 @@ import { ToggleReiteracion } from "./ToggleReiteracion";
  * Se usa con el celular en una mano, con guantes, a pleno sol, colgado del mástil con arnés.
  * Reglas que no se negocian:
  *   - Un solo ítem visible, con la acción que corresponde.
- *   - Los 4 botones de estado ocupan la mitad inferior (zona del pulgar).
+ *   - Los 4 botones de estado ocupan la zona del pulgar.
  *   - OK y N/A avanzan solos al siguiente ítem.
  *   - NO OK / EN PROC abren la cámara directo; no se puede seguir sin foto.
  *   - Cero tipeo obligatorio: lo demás se completa en modo oficina.
+ *
+ * En tablet aparece el riel de zonas a la izquierda —la elevación del equipo— porque ahí sí
+ * hay ancho para ver dónde estás parado sin sacarle lugar al ítem.
  */
 
 interface Props {
@@ -48,6 +52,11 @@ export function PasoAPaso({ ctx, recorrida, onSalir, onAgregarAdicional }: Props
   const item = items[indice] as ItemCatalogo | undefined;
   const registro = recorrida.registros.find((r) => r.itemId === item?.id);
 
+  const zonas = useMemo(
+    () => estadoPorZona(recorrida, ctx.catalogoPorId, ctx.ordenZonas),
+    [recorrida, ctx.catalogoPorId, ctx.ordenZonas],
+  );
+
   // El índice actual se persiste: la recorrida se retoma exactamente donde quedó.
   useEffect(() => {
     if (recorrida.indiceActual !== indice) {
@@ -70,8 +79,8 @@ export function PasoAPaso({ ctx, recorrida, onSalir, onAgregarAdicional }: Props
 
   if (!item || !registro) {
     return (
-      <div className="p-4">
-        <p className="text-lg font-bold">No hay ítems para recorrer.</p>
+      <div className="p-6">
+        <p className="text-lg font-semibold">No hay ítems para recorrer.</p>
         <button className="boton-primario mt-4" onClick={onSalir}>
           Volver
         </button>
@@ -110,6 +119,12 @@ export function PasoAPaso({ ctx, recorrida, onSalir, onAgregarAdicional }: Props
     }
   }
 
+  function irAZona(zona: string) {
+    const i = items.findIndex((it) => it.zona === zona);
+    if (i >= 0) setIndice(i);
+    vibrar();
+  }
+
   function saltarZona() {
     const zonaActual = item!.zona;
     const siguiente = items.findIndex((it, i) => i > indice && it.zona !== zonaActual);
@@ -121,182 +136,198 @@ export function PasoAPaso({ ctx, recorrida, onSalir, onAgregarAdicional }: Props
   const enEvidencia = fase === "EVIDENCIA" && requiereFoto(registro);
 
   return (
-    <div className="flex min-h-[100dvh] flex-col">
-      {/* Barra de progreso: 23/94 · Mástil */}
-      <header className="sticky top-0 z-10 border-b-2 border-stone-300 bg-white px-3 py-2">
-        <div className="flex items-center justify-between gap-2">
-          <button
-            type="button"
-            className="text-base font-bold underline"
-            onClick={onSalir}
-            aria-label="Salir del modo paso a paso"
-          >
-            ← Salir
-          </button>
-          <span className="text-base font-bold">
-            {indice + 1}/{items.length} · {item.zona}
-          </span>
-          <span className="text-sm text-stone-600">{revisados} ok</span>
-        </div>
-        <div
-          className="mt-2 h-2 w-full rounded bg-stone-200"
-          role="progressbar"
-          aria-valuenow={revisados}
-          aria-valuemin={0}
-          aria-valuemax={items.length}
-        >
-          <div
-            className="h-2 rounded bg-stone-900 transition-[width]"
-            style={{ width: `${(revisados / items.length) * 100}%` }}
-          />
-        </div>
-      </header>
+    <div className="flex min-h-[100dvh] bg-acero-100">
+      {/* El riel solo aparece cuando hay ancho para él sin robárselo al ítem. */}
+      <aside className="hidden w-60 shrink-0 border-r border-acero-200 bg-papel md:block lg:w-64">
+        <RielZonas zonas={zonas} zonaActual={item.zona} onIrAZona={irAZona} />
+      </aside>
 
-      {/* Enunciado del ítem */}
-      <main className="flex-1 space-y-3 p-3">
-        <div className="tarjeta">
-          <div className="mb-2 flex flex-wrap items-center gap-2">
-            <span className="text-base font-bold text-stone-500">#{item.id}</span>
-            <span className={`badge ${CLASE_CRITICIDAD[item.criticidadRef]}`}>
-              {ETIQUETA_CRITICIDAD[item.criticidadRef]}
-            </span>
-            {registro.origen && (
-              <span
-                className={`badge ${registro.origen === "NUEVO" ? "bg-blue-700" : "bg-violet-700"}`}
-              >
-                {badgeOrigen(registro.origen, registro.reiteracion)}
-                {registro.reiteracion?.detectadaAutomaticamente ? " 🔎" : ""}
-              </span>
-            )}
-            <button
-              type="button"
-              className="ml-auto flex h-9 w-9 items-center justify-center rounded-full
-                         border-2 border-stone-800 text-lg font-bold"
-              aria-label="Ver el hallazgo típico de este ítem"
-              onClick={() => setAyuda((v) => !v)}
-            >
-              ?
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="sticky top-0 z-10 border-b border-acero-200 bg-papel px-3 py-2 md:px-5">
+          <div className="flex items-center gap-3">
+            <button type="button" className="text-base font-semibold underline" onClick={onSalir}>
+              ← Salir
             </button>
+            <span className="cifras flex-1 truncate text-center text-base font-semibold md:text-left">
+              <span className="tabular-nums">
+                {indice + 1}/{items.length}
+              </span>
+              <span className="text-acero-500"> · {item.zona}</span>
+            </span>
+            <span className="cifras shrink-0 text-sm text-acero-500">{revisados} revisados</span>
           </div>
 
-          <p className="text-lg leading-snug">{item.item}</p>
+          {/* En celular no entra el riel, así que el progreso vuelve a ser una barra. */}
+          <div
+            className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-acero-200 md:hidden"
+            role="progressbar"
+            aria-valuenow={revisados}
+            aria-valuemin={0}
+            aria-valuemax={items.length}
+            aria-label="Ítems revisados"
+          >
+            <div
+              className="h-full bg-acero-900"
+              style={{ width: `${(revisados / items.length) * 100}%` }}
+            />
+          </div>
+        </header>
 
-          {ayuda && (
-            <div className="mt-3 rounded border-l-4 border-stone-800 bg-stone-100 p-3 text-base">
-              <p className="font-bold">Cómo se redacta si falla:</p>
-              <p className="mt-1">{item.hallazgoTipico}</p>
-              {HALLAZGO_DERIVADO.has(item.id) && (
-                <p className="mt-2 text-sm italic text-stone-600">
-                  Redacción derivada de la condición, todavía no tomada del informe real.
-                </p>
+        <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center gap-3 p-3 md:p-5">
+          {/* El enunciado del ítem es lo único que se lee en altura: va grande y sin caja. */}
+          <div className="panel p-4 md:p-5">
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              <span className="cifras text-base font-semibold text-acero-500">#{item.id}</span>
+              <span className={`badge ${CLASE_CRITICIDAD[item.criticidadRef]}`}>
+                {ETIQUETA_CRITICIDAD[item.criticidadRef]}
+              </span>
+              {registro.origen && (
+                <span
+                  className={`badge ${registro.origen === "NUEVO" ? "bg-nuevo" : "bg-reiterado"}`}
+                >
+                  {badgeOrigen(registro.origen, registro.reiteracion)}
+                  {registro.reiteracion?.detectadaAutomaticamente ? " ◆" : ""}
+                </span>
               )}
+              <button
+                type="button"
+                className="ml-auto flex h-10 w-10 items-center justify-center rounded-full border-2 border-acero-900 text-lg font-semibold"
+                aria-expanded={ayuda}
+                aria-label="Ver el hallazgo típico de este ítem"
+                onClick={() => setAyuda((v) => !v)}
+              >
+                ?
+              </button>
             </div>
+
+            <p className="text-[1.15rem] leading-snug md:text-xl">{item.item}</p>
+
+            {ayuda && (
+              <div className="mt-4 border-l-4 border-acero-900 bg-acero-50 p-3 text-base">
+                <p className="font-semibold">Cómo se redacta si falla</p>
+                <p className="mt-1">{item.hallazgoTipico}</p>
+                {HALLAZGO_DERIVADO.has(item.id) && (
+                  <p className="mt-2 text-sm text-acero-500">
+                    Redacción derivada de la condición, todavía no tomada del informe original.
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+
+          {enEvidencia && (
+            <>
+              <section className="panel p-4 md:p-5">
+                <h2 className="mb-3 text-lg font-semibold">
+                  Evidencia
+                  <span className="cifras ml-2 text-base font-normal text-acero-500">
+                    {fotos.length} {fotos.length === 1 ? "foto" : "fotos"}
+                  </span>
+                </h2>
+                <CapturaFoto
+                  itemId={item.id}
+                  fotos={fotos}
+                  onCambio={(nuevas: Foto[]) =>
+                    ctx.actualizarRegistro(item.id, (r) => ({ ...r, evidencia: nuevas }))
+                  }
+                />
+              </section>
+
+              <section className="panel p-4 md:p-5">
+                <ToggleReiteracion
+                  propuesta={propuesta}
+                  origen={registro.origen}
+                  reiteracion={registro.reiteracion}
+                  onCambio={(origen: Origen, reiteracion: Reiteracion | undefined) =>
+                    ctx.actualizarRegistro(item.id, (r) => ({ ...r, origen, reiteracion }))
+                  }
+                />
+              </section>
+
+              <section className="panel p-4 md:p-5">
+                <h2 className="mb-3 text-lg font-semibold">Observación</h2>
+                <NotaVoz
+                  itemId={item.id}
+                  nota={registro.notaVoz}
+                  texto={registro.observaciones}
+                  onNota={(nota) => ctx.actualizarRegistro(item.id, (r) => ({ ...r, notaVoz: nota }))}
+                  onTexto={(texto) =>
+                    ctx.actualizarRegistro(item.id, (r) => ({ ...r, observaciones: texto }))
+                  }
+                />
+              </section>
+            </>
           )}
-        </div>
+        </main>
 
-        {enEvidencia && (
-          <>
-            <div className="tarjeta space-y-3">
-              <p className="text-base font-bold">
-                Evidencia obligatoria ({fotos.length} foto{fotos.length === 1 ? "" : "s"})
-              </p>
-              <CapturaFoto
-                itemId={item.id}
-                fotos={fotos}
-                onCambio={(nuevas: Foto[]) =>
-                  ctx.actualizarRegistro(item.id, (r) => ({ ...r, evidencia: nuevas }))
-                }
-              />
+        {/* Zona del pulgar. Todo lo accionable vive acá abajo, nada arriba. */}
+        <footer className="sticky bottom-0 border-t border-acero-200 bg-papel p-3 md:px-5">
+          <div className="mx-auto w-full max-w-3xl space-y-2.5">
+            {enEvidencia ? (
+              <>
+                <button
+                  type="button"
+                  className="boton-primario"
+                  disabled={fotos.length === 0}
+                  onClick={() => {
+                    vibrar();
+                    setToast("Guardado");
+                    avanzar();
+                  }}
+                >
+                  {fotos.length === 0 ? "Falta la foto" : "Listo, siguiente ítem"}
+                </button>
+                <button
+                  type="button"
+                  className="boton-secundario w-full"
+                  onClick={() => setFase("ESTADO")}
+                >
+                  Cambiar el estado
+                </button>
+              </>
+            ) : (
+              <BotonesEstado actual={registro.estado} onElegir={elegirEstado} />
+            )}
+
+            <div className="flex gap-2">
+              <button
+                type="button"
+                className="boton-secundario flex-1"
+                disabled={indice === 0}
+                onClick={() => setIndice(indice - 1)}
+                aria-label="Ítem anterior"
+              >
+                ‹
+              </button>
+              <button type="button" className="boton-secundario flex-[3]" onClick={saltarZona}>
+                Saltar zona
+              </button>
+              <button
+                type="button"
+                className="boton-secundario flex-1"
+                disabled={indice >= items.length - 1}
+                onClick={() => setIndice(indice + 1)}
+                aria-label="Ítem siguiente"
+              >
+                ›
+              </button>
             </div>
 
-            <div className="tarjeta">
-              <ToggleReiteracion
-                propuesta={propuesta}
-                origen={registro.origen}
-                reiteracion={registro.reiteracion}
-                onCambio={(origen: Origen, reiteracion: Reiteracion | undefined) =>
-                  ctx.actualizarRegistro(item.id, (r) => ({ ...r, origen, reiteracion }))
-                }
-              />
-            </div>
-
-            <div className="tarjeta">
-              <NotaVoz
-                itemId={item.id}
-                nota={registro.notaVoz}
-                texto={registro.observaciones}
-                onNota={(nota) => ctx.actualizarRegistro(item.id, (r) => ({ ...r, notaVoz: nota }))}
-                onTexto={(texto) =>
-                  ctx.actualizarRegistro(item.id, (r) => ({ ...r, observaciones: texto }))
-                }
-              />
-            </div>
-          </>
-        )}
-      </main>
-
-      {/* Zona del pulgar: los 4 botones o el confirmar de la evidencia. */}
-      <footer className="sticky bottom-0 space-y-3 border-t-2 border-stone-300 bg-white p-3">
-        {enEvidencia ? (
-          <>
             <button
               type="button"
-              className="boton-primario"
-              disabled={fotos.length === 0}
-              onClick={() => {
-                vibrar();
-                setToast("Guardado");
-                avanzar();
-              }}
+              className="boton-secundario w-full border-dashed"
+              onClick={() => onAgregarAdicional(item.zona)}
             >
-              {fotos.length === 0 ? "Falta foto" : "Listo · siguiente"}
+              Agregar ítem detectado
             </button>
-            <button type="button" className="boton-secundario w-full" onClick={() => setFase("ESTADO")}>
-              Cambiar el estado
-            </button>
-          </>
-        ) : (
-          <BotonesEstado actual={registro.estado} onElegir={elegirEstado} />
-        )}
-
-        <div className="flex gap-2">
-          <button
-            type="button"
-            className="boton-secundario flex-1"
-            disabled={indice === 0}
-            onClick={() => setIndice(indice - 1)}
-            aria-label="Ítem anterior"
-          >
-            ‹
-          </button>
-          <button type="button" className="boton-secundario flex-[2]" onClick={saltarZona}>
-            Saltar zona
-          </button>
-          <button
-            type="button"
-            className="boton-secundario flex-1"
-            disabled={indice >= items.length - 1}
-            onClick={() => setIndice(indice + 1)}
-            aria-label="Ítem siguiente"
-          >
-            ›
-          </button>
-        </div>
-
-        <button
-          type="button"
-          className="boton-secundario w-full border-dashed"
-          onClick={() => onAgregarAdicional(item.zona)}
-        >
-          + Ítem detectado en recorrida
-        </button>
-      </footer>
+          </div>
+        </footer>
+      </div>
 
       {toast && (
         <div
           role="status"
-          className="pointer-events-none fixed inset-x-0 top-1/2 z-50 mx-auto w-fit rounded-lg
-                     bg-stone-900 px-8 py-4 text-2xl font-bold text-white"
+          className="pointer-events-none fixed inset-x-0 top-1/2 z-50 mx-auto w-fit rounded bg-acero-900 px-8 py-4 text-2xl font-semibold text-white"
         >
           {toast}
         </div>
