@@ -140,7 +140,24 @@ el zip. El `.md` es para humanos; el `.zip` es el único respaldo importable.
 
 ### 4 · Deploy
 
-Push a `main` → el workflow corre tests, buildea y publica. `Settings → Pages → Source: GitHub Actions`.
+**Ya está configurado y publicando.** Pages tiene `build_type: workflow`, así que cada push a
+`main` corre los tests, buildea y publica. Si alguna vez hay que rehacerlo:
+
+```bash
+gh api -X POST repos/apu242007/INSPECCION-DE-CAMPO-EQ-DE-TORRE/pages -f build_type=workflow
+gh workflow run deploy-pages.yml --ref main
+```
+
+> El repo tiene que ser **público**. En repos privados con plan Free, Pages no publica; y con
+> Pro/Team publica pero detrás de login de GitHub, lo que rompe el embebido por iframe en el
+> sitio WellService (el operario en el mástil no tiene cuenta de GitHub).
+
+Si un deploy queda trabado con *"due to in progress deployment"*:
+
+```bash
+gh api -X POST repos/apu242007/INSPECCION-DE-CAMPO-EQ-DE-TORRE/pages/deployments/<SHA>/cancel
+gh workflow run deploy-pages.yml --ref main
+```
 
 ### 5 · Semilla de historial (opcional, por equipo)
 
