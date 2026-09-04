@@ -5,6 +5,16 @@ import * as storage from "../storage";
 import { OPERADORAS, EMPRESA_DEFAULT } from "../types";
 import type { SemillaEquipo } from "../types";
 
+const EQUIPOS_DISPONIBLES = [
+  "TKR-01",
+  "TKR-05",
+  "TKR-06",
+  "TKR-07",
+  "TKR-08",
+  "TKR-10",
+  "TKR-11",
+] as const;
+
 /**
  * Alta de recorrida. Al crearla se generan los 94 registros en SIN_REVISAR.
  *
@@ -54,6 +64,10 @@ export function NuevaRecorrida() {
     }
     void storage.semillaDeEquipo(equipo).then(setSemilla);
   }, [equipo]);
+
+  const opcionesEquipo = [...new Set([...EQUIPOS_DISPONIBLES, ...equipos])].sort((a, b) =>
+    a.localeCompare(b, "es"),
+  );
 
   const pendientes: string[] = [];
   if (!equipo.trim()) pendientes.push("Equipo");
@@ -112,19 +126,18 @@ export function NuevaRecorrida() {
       <div className="panel p-4 grid gap-3 sm:grid-cols-2">
         <label className="etiqueta">
           Equipo *
-          <input
+          <select
             className="campo mt-1"
-            list="equipos-conocidos"
             value={equipo}
             onChange={(e) => setEquipo(e.target.value)}
-            placeholder="TACK-6 / TKR-06"
-            autoComplete="off"
-          />
-          <datalist id="equipos-conocidos">
-            {equipos.map((e) => (
-              <option key={e} value={e} />
+          >
+            <option value="">Seleccionar equipo</option>
+            {opcionesEquipo.map((equipoDisponible) => (
+              <option key={equipoDisponible} value={equipoDisponible}>
+                {equipoDisponible}
+              </option>
             ))}
-          </datalist>
+          </select>
         </label>
 
         <label className="etiqueta">

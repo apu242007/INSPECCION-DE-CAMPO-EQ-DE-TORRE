@@ -172,8 +172,6 @@ html[data-contraste="alto"] {
 
 html {
   font-size: var(--fs-base);
-  text-size-adjust: 100%;
-  -webkit-text-size-adjust: 100%;
 }
 
 body {
@@ -181,7 +179,6 @@ body {
   background: var(--acero-100);
   color: var(--acero-900);
   font-family: "Archivo", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  font-synthesis-weight: none;
   /* El notch del iPhone se come el botón de acción si no se reserva el área segura. */
   padding-bottom: env(safe-area-inset-bottom);
 }
@@ -199,7 +196,6 @@ h4 {
   letter-spacing: -0.012em;
   line-height: 1.12;
   margin: 0;
-  text-wrap: balance;
 }
 
 /*
