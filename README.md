@@ -75,94 +75,59 @@ lo imprime en la consola y **no manda nada a la red**. Para apuntar a los flujos
 
 ---
 
-## Puesta en marcha, en orden
+## Puesta en marcha
 
-Este orden evita el 90% de los "¿y ahora qué?".
-
-### 1 · Listas de SharePoint
-
-Sitio: `https://tackersrl505.sharepoint.com/sites/WellService`
-
-`INSPECCION DE CAMPO EQ TORRE` **ya existe**. Faltan las dos auxiliares y las columnas.
+**Ya está instalado y funcionando.** Todo el backend se levanta con un comando:
 
 ```powershell
-cd sharepoint
-.\Setup-Columns-EQT.ps1              # crea lo que falte, saltea lo que ya está
-.\Setup-Columns-EQT.ps1 -SoloVerificar   # solo reporta, no toca nada
+.\Instalar-Todo.ps1
 ```
 
-El script pide un **device code** una vez (hay que abrir `https://microsoft.com/devicelogin` en el
-navegador y pegar el código). Después guarda el refresh token protegido con DPAPI en
-`%LOCALAPPDATA%` y no vuelve a preguntar por ~90 días.
+Es idempotente: lo que ya existe se saltea. Modos útiles:
 
-Intenta crear las dos listas auxiliares por REST. Si el tenant lo bloquea con HTTP 400, imprime la
-URL para crearlas por UI y sigue con las columnas — el bloqueo es **por tenant**, así que conviene
-probarlo antes de dar por sentado que hace falta el paso manual.
-
-**Paso manual obligatorio:** la columna lookup. `SP.FieldLookup` por REST devuelve 400 en casi
-todos los tenants.
-
-1. Abrir `INSPECCION DE CAMPO EQ TORRE - ITEMS`
-2. **+ Agregar columna → Búsqueda**
-3. Nombre `Recorrida`, información de `INSPECCION DE CAMPO EQ TORRE`, columna `Title`
-
-> La lookup va en la lista **hija**, nunca en la padre. Si queda en la padre, el formulario de
-> Power Automate muestra un `Recorrida Id` fuera de lugar y la hija no tiene cómo referenciar al padre.
-
-### 2 · Los 5 flujos
-
-Se arman a mano en `make.powerautomate.com` (no hay API pública de creación). Cada `.md` de
-[`power-automate/`](power-automate/) tiene el árbol de acciones, cada campo de la UI y la
-expresión `fx` exacta, más un checklist de pre-vuelo.
-
-Empezar por **EQT-01**: es el más largo y establece los patrones que repiten los otros cuatro.
-
-Tres cosas que si se saltean fallan raro y tarde:
-
-- **Esquema JSON del disparador vacío.** No "sincronizado": vacío. Con esquema cargado, cualquier
-  campo nuevo de la SPA se rechaza en tiempo de diseño.
-- **La acción `Respuesta` va ANTES de los loops.** Al final, el navegador espera y a los ~110 s el
-  gateway corta con 502 aunque el flujo termine bien.
-- **Concurrencia 1 en todo loop que escriba sobre la misma fila.** En paralelo aparecen
-  `Save Conflict` intermitentes que no se reproducen a pedido.
-
-Al terminar cada flujo: copiar la URL del disparador y **Exportar → Paquete (.zip)**, y commitear
-el zip. El `.md` es para humanos; el `.zip` es el único respaldo importable.
-
-### 3 · Secrets del repo
-
-`Settings → Secrets and variables → Actions`:
-
-| Secret | De dónde sale |
+| Comando | Qué hace |
 |---|---|
-| `VITE_EQT01_URL` … `VITE_EQT05_URL` | URL del disparador de cada flujo |
-| `VITE_TACKER_KEY` | lo que quieras; tiene que coincidir con el `Check_key` de los flujos |
+| `.\Instalar-Todo.ps1 -SoloVerificar` | Reporta qué falta, no toca nada |
+| `.\Instalar-Todo.ps1 -Probar ...` | Prueba de humo: 200 con la clave, 401 sin ella |
+| `.\Instalar-Todo.ps1 -ProbarCompleto ...` | Crea una recorrida real, la verifica en SharePoint y la borra |
+| `.\Instalar-Todo.ps1 -VerHistorial '01 Crear'` | El historial de corridas con la acción exacta que falló |
+| `.\Instalar-Todo.ps1 -ListarOperaciones` | Los `operationId` reales del conector, del swagger |
+| `.\Instalar-Todo.ps1 -BuscarLookups` | Cómo nombran las lookups los flujos que ya andan |
+| `.\Instalar-Todo.ps1 -Limpiar` | Borra las filas de prueba |
 
-### 4 · Deploy
+### Lo que hace, en orden
 
-**Ya está configurado y publicando.** Pages tiene `build_type: workflow`, así que cada push a
-`main` corre los tests, buildea y publica. Si alguna vez hay que rehacerlo:
+1. **Autentica** con el refresh token cacheado; si venció, pide un device code una vez.
+2. **SharePoint**: crea las dos listas auxiliares, las 53 columnas y la lookup `Recorrida`.
+3. **Power Automate**: crea o actualiza los 5 flujos vía la API de administración, tomando los
+   nombres de instancia de las conexiones de un flujo del entorno que ya las use.
+4. **Secrets**: carga las 5 URLs de disparador y sincroniza `VITE_TACKER_KEY` con la
+   `claveEsperada` de los flujos, para que no puedan desfasarse.
 
-```bash
-gh api -X POST repos/apu242007/INSPECCION-DE-CAMPO-EQ-DE-TORRE/pages -f build_type=workflow
-gh workflow run deploy-pages.yml --ref main
-```
+### Estado actual
 
-> El repo tiene que ser **público**. En repos privados con plan Free, Pages no publica; y con
-> Pro/Team publica pero detrás de login de GitHub, lo que rompe el embebido por iframe en el
-> sitio WellService (el operario en el mástil no tiene cuenta de GitHub).
+| Pieza | Estado |
+|---|---|
+| Listas y columnas de SharePoint | Creadas (25 + 21 + 7) |
+| Columna lookup `Recorrida` | Creada por REST |
+| Los 5 flujos | Creados y activos |
+| Secrets del repo | Los 6 cargados |
+| Prueba end-to-end | Verde: crea, adjunta, escribe hijas, sube foto, historial, limpia |
+| App publicada | Con las URLs reales, fuera de modo demo |
 
-Si un deploy queda trabado con *"due to in progress deployment"*:
+### Lo único que no se puede automatizar
 
-```bash
-gh api -X POST repos/apu242007/INSPECCION-DE-CAMPO-EQ-DE-TORRE/pages/deployments/<SHA>/cancel
-gh workflow run deploy-pages.yml --ref main
-```
+La **autorización de una conexión** de Power Automate: es un objeto del entorno con su propio
+token OAuth y el consentimiento es humano. En este tenant no hizo falta porque ya existían de
+otras apps, y el script las reutiliza.
 
-### 5 · Semilla de historial (opcional, por equipo)
+Y **probar la app en un celular real**. Wake Lock, cámara, y el comportamiento al bloquear la
+pantalla no se reproducen en un emulador.
 
-Para que la primera recorrida de un equipo no proponga "nuevo" en hallazgos que ya salieron tres
-veces en informes externos.
+### Semilla de historial (opcional, por equipo)
+
+Para que la primera recorrida de un equipo no proponga «nuevo» en hallazgos que ya salieron
+tres veces en informes externos.
 
 La de TACK-6 viene incluida (`src/data/semillas/tack6.ts`). Para otro equipo: **Configuración →
 Importar semilla** con un JSON así:

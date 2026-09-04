@@ -60,6 +60,32 @@ function accionSP(operationId, parameters, runAfter = {}) {
   };
 }
 
+/**
+ * Adjuntar un archivo a una fila.
+ *
+ * Los operationId y los nombres de parámetro salen del swagger del conector
+ * (`Instalar-Todo.ps1 -ListarOperaciones`), no de la intuición: la operación NO se llama
+ * "AttachFile" y el nombre del archivo NO va en "fileName", va en `displayName` (query).
+ * Adivinarlos cuesta una vuelta entera, y el error —"could not be found in API"— no dice
+ * cuál es el bueno.
+ */
+function adjuntar(tabla, itemId, nombreArchivo, contenidoBase64, runAfter = {}) {
+  return accionSP(
+    "CreateAttachment",
+    {
+      dataset: SITIO,
+      table: tabla,
+      itemId,
+      displayName: nombreArchivo,
+      // El body termina EXACTAMENTE en el paréntesis. Un salto de línea al final convierte
+      // el valor en plantilla de cadena y el binario se coerce a texto: queda un archivo
+      // del tamaño correcto que no abre.
+      body: contenidoBase64,
+    },
+    runAfter,
+  );
+}
+
 function respuesta(statusCode, body, runAfter = {}) {
   return {
     runAfter,
@@ -141,7 +167,11 @@ function eqt01() {
       dataset: SITIO,
       table: LISTA_ITEMS,
       "item/Title": `@concat('#', string(items('${loop}')?['itemId']))`,
-      "item/Recorrida_x003a__x0020_Id": "@outputs('CreateHeaderItem')?['body/ID']",
+      // El conector nombra la lookup como item/<InternalName>/Id, CON BARRA. No es
+      // "RecorridaId" ni "Recorrida_x003a__x0020_Id": esas dos las probé y las rechaza.
+      // La forma de saberlo no es deducirla, es mirar un flujo del entorno que ya escriba una
+      // lookup (`Instalar-Todo.ps1 -BuscarLookups`).
+      "item/Recorrida/Id": "@outputs('CreateHeaderItem')?['body/ID']",
       "item/ItemId": `@int(items('${loop}')?['itemId'])`,
       "item/Zona": `@items('${loop}')?['zona']`,
       "item/ItemTexto": `@items('${loop}')?['itemTexto']`,
@@ -254,15 +284,12 @@ function eqt01() {
         // SharePoint usa concurrencia optimista por ETag -> Save Conflict intermitente.
         runtimeConfiguration: { concurrency: { repetitions: 1 } },
         actions: {
-          Add_attachment: accionSP("AttachFile", {
-            dataset: SITIO,
-            table: LISTA_PADRE,
-            id: "@outputs('CreateHeaderItem')?['body/ID']",
-            fileName: "@items('Loop_attachments')?['name']",
-            // Cadena que termina EXACTAMENTE en el paréntesis: un \r\n final convierte el
-            // valor en plantilla de cadena y el binario se coerce a texto.
-            body: "@base64ToBinary(items('Loop_attachments')?['contentBase64'])",
-          }),
+          Add_attachment: adjuntar(
+            LISTA_PADRE,
+            "@outputs('CreateHeaderItem')?['body/ID']",
+            "@items('Loop_attachments')?['name']",
+            "@base64ToBinary(items('Loop_attachments')?['contentBase64'])",
+          ),
         },
       },
 
@@ -387,13 +414,12 @@ function eqt02() {
             // Todas las fotos van a la MISMA fila.
             runtimeConfiguration: { concurrency: { repetitions: 1 } },
             actions: {
-              Add_attachment_item: accionSP("AttachFile", {
-                dataset: SITIO,
-                table: LISTA_ITEMS,
-                id: "@variables('varItemId')",
-                fileName: "@items('Loop_fotos')?['name']",
-                body: "@base64ToBinary(items('Loop_fotos')?['contentBase64'])",
-              }),
+              Add_attachment_item: adjuntar(
+                LISTA_ITEMS,
+                "@variables('varItemId')",
+                "@items('Loop_fotos')?['name']",
+                "@base64ToBinary(items('Loop_fotos')?['contentBase64'])",
+              ),
             },
           },
           Condicion_notaVoz: {
@@ -401,13 +427,12 @@ function eqt02() {
             type: "If",
             expression: { equals: ["@empty(triggerBody()?['notaVoz'])", false] },
             actions: {
-              Add_attachment_nota: accionSP("AttachFile", {
-                dataset: SITIO,
-                table: LISTA_ITEMS,
-                id: "@variables('varItemId')",
-                fileName: "@triggerBody()?['notaVoz']?['name']",
-                body: "@base64ToBinary(triggerBody()?['notaVoz']?['contentBase64'])",
-              }),
+              Add_attachment_nota: adjuntar(
+                LISTA_ITEMS,
+                "@variables('varItemId')",
+                "@triggerBody()?['notaVoz']?['name']",
+                "@base64ToBinary(triggerBody()?['notaVoz']?['contentBase64'])",
+              ),
             },
             else: { actions: {} },
           },
@@ -490,17 +515,68 @@ function eqt03() {
         { Get_items_noconformes: ["Succeeded"] },
       ),
 
+      /*
+       * `select` NO es una funcion del lenguaje de expresiones: es una ACCION de operaciones
+       * de datos. Usarla inline falla en ejecucion con "The template function 'select' is not
+       * defined or not valid" y el flujo muere sin llegar a la Respuesta -> el cliente ve un
+       * 502 NoResponse que no dice nada.
+       *
+       * Como accion ademas es mas limpio: maneja los tipos solo y desaparece toda la gimnasia
+       * de armar JSON a mano con concat y comillas escapadas.
+       */
+      Select_recorridas: {
+        runAfter: { Get_catalogo_extra: ["Succeeded"] },
+        type: "Select",
+        inputs: {
+          from: "@body('Get_headers_equipo')?['value']",
+          select: {
+            folio: "@item()?['Title']",
+            fecha: "@item()?['FechaRelevamiento']",
+            pozo: "@item()?['Pozo']",
+            id: "@item()?['ID']",
+          },
+        },
+      },
+
+      Select_noconformes: {
+        runAfter: { Select_recorridas: ["Succeeded"] },
+        type: "Select",
+        inputs: {
+          from: "@body('Get_items_noconformes')?['value']",
+          select: {
+            recorridaId: "@item()?['Recorrida']?['Id']",
+            itemId: "@item()?['ItemId']",
+          },
+        },
+      },
+
+      Select_catalogo: {
+        runAfter: { Select_noconformes: ["Succeeded"] },
+        type: "Select",
+        inputs: {
+          from: "@body('Get_catalogo_extra')?['value']",
+          select: {
+            itemId: "@item()?['ItemId']",
+            zona: "@item()?['Zona']",
+            // CriticidadRef es Choice en esta lista: el conector la devuelve como objeto.
+            // Igual se guarda la guarda de tipo, porque la misma columna puede volver como
+            // cadena segun como se haya escrito la fila.
+            criticidadRef:
+              "@if(startsWith(string(item()?['CriticidadRef']), '{'), json(string(item()?['CriticidadRef']))?['Value'], string(item()?['CriticidadRef']))",
+            itemTexto: "@item()?['ItemTexto']",
+            hallazgoTipico: "@item()?['HallazgoTipico']",
+          },
+        },
+      },
+
       Respuesta_historial: respuesta(
         200,
         {
-          recorridas:
-            "@json(concat('[', join(select(body('Get_headers_equipo')?['value'], concat('{\"folio\":', string(json(concat('\"', coalesce(item()?['Title'], ''), '\"'))), ',\"fecha\":\"', coalesce(item()?['FechaRelevamiento'], ''), '\",\"pozo\":', string(json(concat('\"', coalesce(item()?['Pozo'], ''), '\"'))), ',\"id\":', string(item()?['ID']), '}')), ','), ']'))",
-          itemsNoConformes:
-            "@json(concat('[', join(select(body('Get_items_noconformes')?['value'], concat('{\"recorridaId\":', string(coalesce(item()?['Recorrida']?['Id'], 0)), ',\"itemId\":', string(coalesce(item()?['ItemId'], 0)), '}')), ','), ']'))",
-          catalogoExtra:
-            "@json(concat('[', join(select(body('Get_catalogo_extra')?['value'], concat('{\"itemId\":', string(coalesce(item()?['ItemId'], 0)), ',\"zona\":', string(json(concat('\"', coalesce(item()?['Zona'], ''), '\"'))), ',\"criticidadRef\":\"', if(startsWith(string(item()?['CriticidadRef']), '{'), json(string(item()?['CriticidadRef']))?['Value'], string(item()?['CriticidadRef'])), '\",\"itemTexto\":', string(json(concat('\"', coalesce(item()?['ItemTexto'], ''), '\"'))), ',\"hallazgoTipico\":', string(json(concat('\"', coalesce(item()?['HallazgoTipico'], ''), '\"'))), '}')), ','), ']'))",
+          recorridas: "@body('Select_recorridas')",
+          itemsNoConformes: "@body('Select_noconformes')",
+          catalogoExtra: "@body('Select_catalogo')",
         },
-        { Get_catalogo_extra: ["Succeeded"] },
+        { Select_catalogo: ["Succeeded"] },
       ),
     },
   };
@@ -563,13 +639,12 @@ function eqt04() {
             foreach: "@triggerBody()?['fotos']",
             runtimeConfiguration: { concurrency: { repetitions: 1 } },
             actions: {
-              Add_attachment_extra: accionSP("AttachFile", {
-                dataset: SITIO,
-                table: LISTA_ITEMS,
-                id: "@variables('varItemId')",
-                fileName: "@items('Loop_fotos_extra')?['name']",
-                body: "@base64ToBinary(items('Loop_fotos_extra')?['contentBase64'])",
-              }),
+              Add_attachment_extra: adjuntar(
+                LISTA_ITEMS,
+                "@variables('varItemId')",
+                "@items('Loop_fotos_extra')?['name']",
+                "@base64ToBinary(items('Loop_fotos_extra')?['contentBase64'])",
+              ),
             },
           },
           Respuesta_ok_04: respuesta(
@@ -636,27 +711,26 @@ function eqt05() {
         foreach: "@triggerBody()?['firmas']",
         runtimeConfiguration: { concurrency: { repetitions: 1 } },
         actions: {
-          Add_attachment_firma: accionSP("AttachFile", {
-            dataset: SITIO,
-            table: LISTA_PADRE,
-            id: "@triggerBody()?['recorridaId']",
-            fileName: "@items('Loop_firmas')?['name']",
-            body: "@base64ToBinary(items('Loop_firmas')?['contentBase64'])",
-          }),
+          Add_attachment_firma: adjuntar(
+            LISTA_PADRE,
+            "@triggerBody()?['recorridaId']",
+            "@items('Loop_firmas')?['name']",
+            "@base64ToBinary(items('Loop_firmas')?['contentBase64'])",
+          ),
         },
       },
 
       // SharePoint no sobreescribe un adjunto con el mismo nombre: hay que borrarlo primero.
       Get_attachments: accionSP(
-        "GetAttachments",
-        { dataset: SITIO, table: LISTA_PADRE, id: "@triggerBody()?['recorridaId']" },
+        "GetItemAttachments",
+        { dataset: SITIO, table: LISTA_PADRE, itemId: "@triggerBody()?['recorridaId']" },
         { Loop_firmas: ["Succeeded"] },
       ),
 
       Loop_borrar_pdf: {
         runAfter: { Get_attachments: ["Succeeded"] },
         type: "Foreach",
-        foreach: "@body('Get_attachments')",
+        foreach: "@body('Get_attachments')?['value']",
         runtimeConfiguration: { concurrency: { repetitions: 1 } },
         actions: {
           Condicion_es_pdf: {
@@ -671,8 +745,8 @@ function eqt05() {
               Delete_attachment: accionSP("DeleteAttachment", {
                 dataset: SITIO,
                 table: LISTA_PADRE,
-                id: "@triggerBody()?['recorridaId']",
-                fileIdentifier: "@items('Loop_borrar_pdf')?['Id']",
+                itemId: "@triggerBody()?['recorridaId']",
+                attachmentId: "@items('Loop_borrar_pdf')?['Id']",
               }),
             },
             else: { actions: {} },
@@ -680,15 +754,11 @@ function eqt05() {
         },
       },
 
-      Add_attachment_pdf_final: accionSP(
-        "AttachFile",
-        {
-          dataset: SITIO,
-          table: LISTA_PADRE,
-          id: "@triggerBody()?['recorridaId']",
-          fileName: "@triggerBody()?['pdf']?['name']",
-          body: "@base64ToBinary(triggerBody()?['pdf']?['contentBase64'])",
-        },
+      Add_attachment_pdf_final: adjuntar(
+        LISTA_PADRE,
+        "@triggerBody()?['recorridaId']",
+        "@triggerBody()?['pdf']?['name']",
+        "@base64ToBinary(triggerBody()?['pdf']?['contentBase64'])",
         // También "Skipped": si la fila no tenía PDF previo, el loop no hizo nada y sin esto
         // el flujo se corta antes de adjuntar el definitivo.
         { Loop_borrar_pdf: ["Succeeded", "Skipped"] },
@@ -746,6 +816,22 @@ function eqt05() {
  * Chequea en segundos lo que el importador tarda una vuelta entera en decirte, y una corrida
  * entera en revelar. Sale con código != 0 si encuentra algo.
  */
+/**
+ * Operaciones REALES del conector de SharePoint, leídas del swagger con
+ * `Instalar-Todo.ps1 -ListarOperaciones`. Los nombres intuitivos no existen: no hay
+ * "AttachFile" ni "GetAttachments", y el nombre del archivo va en `displayName`, no en
+ * `fileName`. Cada nombre inventado cuesta una vuelta completa de aplicar y leer el error.
+ */
+const OPERACIONES_SP = {
+  GetItems: ["dataset", "table", "$filter", "$orderby", "$top"],
+  GetItem: ["dataset", "table", "id"],
+  PostItem: ["dataset", "table"],
+  PatchItem: ["dataset", "table", "id"],
+  CreateAttachment: ["dataset", "table", "itemId", "displayName", "body"],
+  GetItemAttachments: ["dataset", "table", "itemId"],
+  DeleteAttachment: ["dataset", "table", "itemId", "attachmentId"],
+};
+
 function validar(flujo) {
   const errores = [];
   const nombres = new Map();
@@ -793,6 +879,13 @@ function validar(flujo) {
         const abre = (t.match(/\(/g) ?? []).length;
         const cierra = (t.match(/\)/g) ?? []).length;
         if (abre !== cierra) errores.push(`${nombre}: paréntesis desbalanceados en @{...}`);
+      }
+
+      // `select`, `filter` y `join` inline: select NO existe como funcion (es una accion) y
+      // usarlo mata el run sin llegar a la Respuesta -> 502 NoResponse en el cliente.
+      for (const m of json.matchAll(/@?select\(/g)) {
+        void m;
+        errores.push(`${nombre}: usa select(...) como funcion, y select es una ACCION de datos`);
       }
 
       // Un nombre de adjunto armado con un formato de fecha que lleva '/' invalida el archivo
@@ -864,6 +957,26 @@ function validar(flujo) {
     }
   }
   runAfterValido(flujo.acciones, "raiz");
+
+  // Los operationId y sus parámetros, contra el contrato real del conector.
+  for (const [nombre, a] of entradasProfundas(flujo.acciones)) {
+    if (a.inputs?.host?.apiId !== API_SP) continue;
+    const op = a.inputs.host.operationId;
+    const permitidos = OPERACIONES_SP[op];
+    if (!permitidos) {
+      errores.push(
+        `${nombre}: operationId "${op}" no existe en el conector de SharePoint (validos: ${Object.keys(OPERACIONES_SP).join(", ")})`,
+      );
+      continue;
+    }
+    for (const par of Object.keys(a.inputs.parameters ?? {})) {
+      // item/... son columnas de la lista: las valida SharePoint, no el swagger.
+      if (par.startsWith("item/")) continue;
+      if (!permitidos.includes(par)) {
+        errores.push(`${nombre}: ${op} no acepta el parametro "${par}" (acepta: ${permitidos.join(", ")})`);
+      }
+    }
+  }
 
   // PatchItem y PostItem exigen todas las obligatorias de la lista, Title incluida.
   for (const [nombre, a] of entradasProfundas(flujo.acciones)) {

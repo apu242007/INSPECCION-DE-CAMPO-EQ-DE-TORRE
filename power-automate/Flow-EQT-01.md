@@ -223,7 +223,7 @@ cargando cada campo por la pestaña `fx`, sin tocar el selector de archivos.
 | Columna | Expresión `fx` |
 |---|---|
 | `Title` | `concat('#', string(items('Loop_items')?['itemId']))` |
-| **`Recorrida Id`** (lookup) | `outputs('CreateHeaderItem')?['body/ID']` |
+| **`Recorrida/Id`** (lookup) | `outputs('CreateHeaderItem')?['body/ID']` |
 | `ItemId` | `int(items('Loop_items')?['itemId'])` |
 | `Zona` | `items('Loop_items')?['zona']` |
 | `ItemTexto` | `items('Loop_items')?['itemTexto']` |
@@ -246,9 +246,10 @@ cargando cada campo por la pestaña `fx`, sin tocar el selector de archivos.
 | `FotosCount` | `if(equals(items('Loop_items')?['fotosCount'], null), 0, int(items('Loop_items')?['fotosCount']))` |
 | `Equipo` | `triggerBody()?['equipo']` |
 
-> **La lookup se llena con el ID del padre, nunca con el Title.** Si el formulario no muestra
-> `Recorrida Id`, la columna quedó creada en la lista equivocada: hay que borrarla del padre y
-> recrearla en `<LISTA_ITEMS>` (ver el script de SharePoint).
+> **La lookup se llena con el ID del padre, nunca con el Title.** En la definición el parámetro
+> es `item/Recorrida/Id`, **con barra** — no `RecorridaId`. Si el formulario no muestra el campo,
+> la columna quedó creada en la lista equivocada: hay que borrarla del padre y recrearla en
+> `<LISTA_ITEMS>`.
 
 > Se crean **las 94 filas**, también las que están en OK. Estas listas alimentan después Power BI
 > y un dashboard sin los OK no puede calcular el % de avance.
