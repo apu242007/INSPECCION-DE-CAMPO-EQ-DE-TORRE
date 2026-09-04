@@ -248,12 +248,21 @@ export function RecorridaPage() {
           <span className="cifras shrink-0 text-xs text-white/60">
             {ctx.guardado ? "Guardado" : "Guardando…"}
           </span>
-          {!recorrida.cerrada && (
-            <button type="button" className="tab-cromo shrink-0" onClick={() => setVista("campo")}>
+        </div>
+
+        {/* Fila propia: es una acción, no un dato, y con guantes necesita su propio alto de
+            toque en vez de competir por espacio con el nombre del equipo y la fecha. */}
+        {!recorrida.cerrada && (
+          <div className="mx-auto w-full max-w-[1600px] px-3 pt-1.5 md:px-6">
+            <button
+              type="button"
+              className="tab-cromo min-h-[44px] w-full sm:w-auto"
+              onClick={() => setVista("campo")}
+            >
               ▶ Modo campo
             </button>
-          )}
-        </div>
+          </div>
+        )}
 
         <div className="mx-auto w-full max-w-[1600px] px-3 pb-2 pt-2 md:px-6">
           <Escalera zonas={zonas} />

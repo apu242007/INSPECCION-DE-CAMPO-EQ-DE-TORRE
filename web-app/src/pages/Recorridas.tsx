@@ -199,9 +199,6 @@ export function Recorridas() {
                   <span className={f.noOk > 0 ? "text-critico-ink" : "text-acero-500"}>
                     NO OK <strong>{f.noOk}</strong>
                   </span>
-                  <span className={f.reiterativos > 0 ? "text-reiterado-ink" : "text-acero-500"}>
-                    Reiterativos <strong>{f.reiterativos}</strong>
-                  </span>
                 </div>
 
                 <div className="mt-3 flex flex-wrap gap-2">
@@ -235,7 +232,6 @@ export function Recorridas() {
                   <th className="py-2 pr-3 font-semibold">Fecha</th>
                   <th className="py-2 pr-3 text-right font-semibold">Avance</th>
                   <th className="py-2 pr-3 text-right font-semibold">NO OK</th>
-                  <th className="py-2 pr-3 text-right font-semibold">Reiter.</th>
                   <th className="py-2 pr-3 font-semibold">Envío</th>
                   <th className="py-2 pr-4" />
                 </tr>
@@ -267,13 +263,6 @@ export function Recorridas() {
                       }`}
                     >
                       {f.noOk || "—"}
-                    </td>
-                    <td
-                      className={`cifras py-2.5 pr-3 text-right font-semibold ${
-                        f.reiterativos > 0 ? "text-reiterado-ink" : "text-acero-300"
-                      }`}
-                    >
-                      {f.reiterativos || "—"}
                     </td>
                     <td className="py-2.5 pr-3 text-sm">
                       {f.pendientesSync > 0 ? (

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { HALLAZGO_DERIVADO, ZONAS } from "../data/catalogo";
+import { ZONAS } from "../data/catalogo";
 import { badgeOrigen } from "../lib/reiteracion";
 import { criticidadEfectiva, estaEscalado } from "../lib/metrics";
 import type {
@@ -108,8 +108,7 @@ export function ListaZonas({
   // Zonas forzadas manualmente (true = forzada abierta, false = forzada cerrada). Sin
   // entrada acá, el plegado es automático: se cierra sola al completarse.
   const [overrideZona, setOverrideZona] = useState<Map<string, boolean>>(new Map());
-  const [ayudaDe, setAyudaDe] = useState<number | null>(null);
-  // Ítems que, aunque ya están marcados, el usuario reabrió a mano para revisarlos de nuevo.
+  // Item que, además, el usuario reabrió a mano para revisarlo de nuevo.
   const [expandidos, setExpandidos] = useState<Set<number>>(new Set());
   const [deshacer, setDeshacer] = useState<{ itemId: number; anterior: Estado } | null>(null);
   const deshacerTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -353,25 +352,16 @@ export function ListaZonas({
                                 {estaEscalado(r, catalogo) && (
                                   <span className="badge bg-critico">Escalado</span>
                                 )}
-                                {info?.hallazgoTipico && (
-                                  <button
-                                    type="button"
-                                    aria-label={`Hallazgo típico del ítem ${r.itemId}`}
-                                    aria-expanded={ayudaDe === r.itemId}
-                                    className="flex h-6 w-6 items-center justify-center rounded-full border border-acero-500 text-xs font-bold text-acero-700"
-                                    onClick={() =>
-                                      setAyudaDe(ayudaDe === r.itemId ? null : r.itemId)
-                                    }
-                                  >
-                                    ?
-                                  </button>
-                                )}
+                                {/* Un solo control para ver el hallazgo típico y editar
+                                    responsable/plazo/acción correctiva: el detalle ya
+                                    incluye el hallazgo típico detrás de su propio "?". */}
                                 <button
                                   type="button"
-                                  className="text-xs font-semibold text-acero-700 underline"
+                                  aria-label={`Detalle del ítem ${r.itemId}`}
+                                  className="flex h-6 min-w-[1.5rem] items-center justify-center rounded-full border border-acero-500 px-1.5 text-xs font-bold text-acero-700"
                                   onClick={() => onAbrirItem(r.itemId)}
                                 >
-                                  Detalle
+                                  ⋯
                                 </button>
                                 {marcado && (
                                   <button
@@ -391,18 +381,6 @@ export function ListaZonas({
                               </div>
                             </div>
                           </div>
-
-                          {ayudaDe === r.itemId && info && (
-                            <div className="ml-9 mt-2 border-l-[3px] border-acero-900 bg-acero-50 p-2.5 text-sm">
-                              <p>{info.hallazgoTipico}</p>
-                              {HALLAZGO_DERIVADO.has(info.id) && (
-                                <p className="mt-1.5 text-acero-500">
-                                  Redacción derivada de la condición, todavía no tomada del
-                                  informe original.
-                                </p>
-                              )}
-                            </div>
-                          )}
 
                           {/* La acción principal: marcar. Siempre visible, un toque. */}
                           <div className="ml-9 mt-1.5">
@@ -452,7 +430,8 @@ export function ListaZonas({
       {deshacer && (
         <div
           role="status"
-          className="fixed inset-x-0 bottom-4 z-40 mx-auto flex w-fit items-center gap-3 rounded-[3px] bg-acero-950 px-4 py-2.5 text-sm text-white shadow-lg"
+          className="fixed inset-x-0 z-40 mx-auto flex w-fit items-center gap-3 rounded-[3px] bg-acero-950 px-4 py-2.5 text-sm text-white shadow-lg"
+          style={{ bottom: "calc(1rem + env(safe-area-inset-bottom))" }}
         >
           <span>Ítem #{deshacer.itemId} marcado.</span>
           <button

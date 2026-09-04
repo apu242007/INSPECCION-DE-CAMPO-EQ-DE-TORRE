@@ -167,11 +167,24 @@ export function PasoAPaso({ ctx, recorrida, onSalir, onAgregarAdicional }: Props
           </div>
 
           {/*
-            En celular no entra el riel, así que la escalera hace su trabajo: un tramo por
-            zona, con el tramo actual marcado y tocable para saltar.
+            En celular no entra el riel. La escalera queda como indicador —17 tramos en 360px
+            son ~18px cada uno, intocable con guantes—; el salto de zona se hace con un select
+            nativo, que da un picker con filas de alto completo sin construir nada a medida.
           */}
-          <div className="mt-2 md:hidden">
-            <Escalera zonas={zonas} zonaActual={item.zona} onIrAZona={irAZona} />
+          <div className="mt-2 space-y-2 md:hidden">
+            <Escalera zonas={zonas} zonaActual={item.zona} />
+            <select
+              className="campo min-h-[44px]"
+              aria-label="Ir a zona"
+              value={item.zona}
+              onChange={(e) => irAZona(e.target.value)}
+            >
+              {zonas.map((z) => (
+                <option key={z.zona} value={z.zona}>
+                  {z.zona} ({z.revisados}/{z.total})
+                </option>
+              ))}
+            </select>
           </div>
         </header>
 
