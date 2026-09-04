@@ -26,11 +26,11 @@ export const ETIQUETA_ESTADO_CORTA: Record<Estado, string> = {
 
 /** Hex para el PDF y los gráficos, donde no hay variables CSS. */
 export const COLOR_ESTADO: Record<Estado, string> = {
-  SIN_REVISAR: "#b9bfc2",
+  SIN_REVISAR: "#b0b9bf",
   OK: "#14804a",
   NO_OK: "#c8102e",
   EN_PROC: "#d2560a",
-  NA: "#6b7378",
+  NA: "#6a757d",
 };
 
 /** Relleno sólido: texto blanco. El amarillo no aparece acá porque necesita texto oscuro. */
@@ -53,7 +53,7 @@ export const COLOR_CRITICIDAD: Record<Criticidad, string> = {
   CRITICA: "#c8102e",
   MAYOR: "#d2560a",
   MENOR: "#f2b705",
-  GENERAL: "#6b7378",
+  GENERAL: "#6a757d",
 };
 
 /**
@@ -88,6 +88,20 @@ export const COLOR_SEMAFORO: Record<Semaforo, string> = {
   VERDE: "#14804a",
 };
 
+/** El semáforo como montante del mástil, para la ficha y la fila de una recorrida. */
+export const LARGUERO_SEMAFORO: Record<Semaforo, string> = {
+  ROJO: "larguero larguero-no",
+  AMARILLO: "larguero larguero-may",
+  VERDE: "larguero larguero-ok",
+};
+
+/** El semáforo sobre cromo: el mismo color de señal, aclarado para leerse en la chapa oscura. */
+export const CLASE_SEMAFORO_LUZ: Record<Semaforo, string> = {
+  ROJO: "bg-critico-luz",
+  AMARILLO: "bg-mayor-luz",
+  VERDE: "bg-conforme-luz",
+};
+
 export const CLASE_SEMAFORO: Record<Semaforo, string> = {
   ROJO: "bg-critico",
   AMARILLO: "bg-mayor",
@@ -100,6 +114,24 @@ export const EXPLICACION_SEMAFORO: Record<Semaforo, string> = {
   AMARILLO: "Hay hallazgos mayores abiertos.",
   VERDE: "Todos los ítems están conformes o no aplican.",
 };
+
+/**
+ * Color del larguero de una zona: el montante estructural que se pinta a la izquierda de la
+ * sección. Rojo si la zona tiene hallazgos abiertos, verde si está terminada, grafito si es
+ * la zona en la que se está parado, gris si todavía no se tocó. Apiladas, las secciones se
+ * leen como la celosía del mástil.
+ */
+export function claseLarguero(opciones: {
+  noConformes: number;
+  revisados: number;
+  total: number;
+  actual?: boolean;
+}): string {
+  if (opciones.noConformes > 0) return "larguero larguero-no";
+  if (opciones.total > 0 && opciones.revisados === opciones.total) return "larguero larguero-ok";
+  if (opciones.actual) return "larguero larguero-curso";
+  return "larguero";
+}
 
 const TZ = "America/Argentina/Buenos_Aires";
 

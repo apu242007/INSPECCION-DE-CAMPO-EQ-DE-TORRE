@@ -11,7 +11,7 @@ import type {
   Recorrida,
   RegistroItem,
 } from "../types";
-import { CLASE_CRITICIDAD, ETIQUETA_CRITICIDAD, ETIQUETA_ESTADO } from "../ui";
+import { CLASE_CRITICIDAD, ETIQUETA_CRITICIDAD, ETIQUETA_ESTADO, claseLarguero } from "../ui";
 import { CapturaFoto } from "./campo/CapturaFoto";
 import { SelectorEstado } from "./SelectorEstado";
 
@@ -183,7 +183,19 @@ export function ListaZonas({
             const completa = revisados === registros.length;
 
             return (
-              <section key={zona} className="panel overflow-hidden">
+              /*
+                El montante pintado por el estado de la zona. Apiladas, las secciones se leen
+                como la celosía del mástil que se va subiendo: rojo donde hay hallazgos, verde
+                donde está terminado, gris donde falta.
+              */
+              <section
+                key={zona}
+                className={`panel overflow-hidden ${claseLarguero({
+                  noConformes: noOk,
+                  revisados,
+                  total: registros.length,
+                })}`}
+              >
                 <h3 className="sticky top-0 z-[1] bg-acero-50">
                   <button
                     type="button"
@@ -194,10 +206,15 @@ export function ListaZonas({
                     <span aria-hidden className="w-3 shrink-0 text-acero-500">
                       {abierta ? "▾" : "▸"}
                     </span>
-                    <span className="min-w-0 flex-1 truncate font-semibold">{zona}</span>
+                    <span
+                      className="min-w-0 flex-1 truncate"
+                      style={{ fontStretch: "88%", fontWeight: 700 }}
+                    >
+                      {zona}
+                    </span>
                     {noOk > 0 && <span className="badge bg-critico">{noOk} NO OK</span>}
                     <span
-                      className={`cifras w-14 shrink-0 text-right text-sm ${
+                      className={`cifras w-14 shrink-0 text-right text-sm font-semibold ${
                         completa ? "text-conforme-ink" : "text-acero-500"
                       }`}
                     >
@@ -228,9 +245,9 @@ export function ListaZonas({
                           }`}
                         >
                           <div className="flex items-start gap-2">
-                            <span className="cifras mt-0.5 w-8 shrink-0 text-sm font-semibold text-acero-500">
-                              #{r.itemId}
-                            </span>
+                            {/* El número es con lo que se habla del hallazgo por radio y con lo
+                                que aparece en el informe: va estampado, no en gris chico. */}
+                            <span className="chapa mt-0.5">#{r.itemId}</span>
                             <div className="min-w-0 flex-1">
                               <p className="text-[0.95rem] leading-snug">{info?.item}</p>
                               <div className="mt-1 flex flex-wrap items-center gap-1.5">
@@ -277,7 +294,7 @@ export function ListaZonas({
                           </div>
 
                           {ayudaDe === r.itemId && info && (
-                            <div className="ml-10 mt-2 border-l-4 border-acero-900 bg-acero-50 p-2.5 text-sm">
+                            <div className="ml-9 mt-2 border-l-[3px] border-acero-900 bg-acero-50 p-2.5 text-sm">
                               <p>{info.hallazgoTipico}</p>
                               {HALLAZGO_DERIVADO.has(info.id) && (
                                 <p className="mt-1.5 text-acero-500">
@@ -289,7 +306,7 @@ export function ListaZonas({
                           )}
 
                           {/* La acción principal: marcar. Siempre visible, un toque. */}
-                          <div className="ml-10 mt-1.5">
+                          <div className="ml-9 mt-1.5">
                             <SelectorEstado
                               actual={r.estado}
                               deshabilitado={bloqueado}
@@ -301,7 +318,7 @@ export function ListaZonas({
                           {/* Un NO OK sin foto no se puede dejar así: la cámara aparece acá
                               mismo, sin abrir otra pantalla. */}
                           {noConforme && !bloqueado && (
-                            <div className="ml-10 mt-2">
+                            <div className="ml-9 mt-2">
                               {faltaFoto && (
                                 <p className="mb-1.5 text-sm font-semibold text-critico-ink">
                                   Falta la foto de este hallazgo.
@@ -317,7 +334,7 @@ export function ListaZonas({
                           )}
 
                           {noConforme && bloqueado && (
-                            <p className="ml-10 mt-1 text-sm text-acero-500">
+                            <p className="ml-9 mt-1 text-sm text-acero-500">
                               {r.evidencia.length} foto(s) · {ETIQUETA_ESTADO[r.estado]}
                             </p>
                           )}
@@ -368,10 +385,8 @@ function BarraFiltros({
         <button
           type="button"
           aria-pressed={filtros.soloPendientes}
-          className={`min-h-[48px] shrink-0 rounded border-2 px-3 font-semibold ${
-            filtros.soloPendientes
-              ? "border-acero-900 bg-acero-900 text-white"
-              : "border-acero-300 bg-papel"
+          className={`boton-secundario shrink-0 ${
+            filtros.soloPendientes ? "bg-acero-900 text-papel" : "border-acero-300"
           }`}
           onClick={() => set("soloPendientes", !filtros.soloPendientes)}
         >
@@ -380,7 +395,7 @@ function BarraFiltros({
         <button
           type="button"
           aria-expanded={abiertos}
-          className="min-h-[48px] shrink-0 rounded border-2 border-acero-300 bg-papel px-3 font-semibold"
+          className="boton-secundario shrink-0 border-acero-300"
           onClick={() => setAbiertos((v) => !v)}
         >
           Filtros{avanzados ? " ●" : ""}

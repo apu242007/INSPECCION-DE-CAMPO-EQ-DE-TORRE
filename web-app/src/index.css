@@ -3,36 +3,86 @@
 @tailwind utilities;
 
 /*
- * SISTEMA DE DISEÑO
+ * ============================================================================
+ * SISTEMA DE DISEÑO — "TORRE"
+ * ============================================================================
  *
- * El vocabulario visual no sale de una paleta de marca: sale de la señalética de seguridad
- * del yacimiento. La cuadrilla ya lee rojo/naranja/amarillo/verde todos los días en el equipo,
- * en los matafuegos y en los carteles. Usar otra escala sería pedirles que aprendan un idioma
- * nuevo para decir lo mismo.
+ * La app se usa en dos lugares muy distintos: colgado del mástil con arnés, y sentado en
+ * la oficina de QHSE armando el informe. El lenguaje visual sale del equipo, no de una
+ * paleta de marca.
  *
- * La única excepción es el violeta de "reiterativo": es el concepto propio de esta app y no
- * puede confundirse jamás con una severidad, así que vive fuera de la escala de señalética.
+ * TRES DECISIONES, Y TODO LO DEMÁS SE DESPRENDE DE ELLAS
  *
- * Cada color tiene dos formas:
- *   --x        relleno saturado. Va con texto blanco SOLO en texto grande y bold (>= 18.66px),
- *              que es el umbral 3:1 de WCAG. El amarillo nunca: lleva texto oscuro, como el
- *              cartel real.
- *   --x-ink    variante oscura para texto chico sobre fondo claro (umbral 4.5:1).
- *   --x-suave  fondo tenue para resaltar filas sin gritar.
+ * 1 · UN COLOR SATURADO = UN SIGNIFICADO.
+ *     El rojo, el naranja, el amarillo y el verde son la señalética del yacimiento: la
+ *     cuadrilla ya los lee en los carteles y en los matafuegos. Por eso el resto de la
+ *     interfaz es ACROMÁTICA — grafito y papel. Si el cromo tuviera color, competiría con
+ *     el único color que acá significa algo. El violeta de "reiterativo" es la excepción
+ *     deliberada: es un concepto propio de la app y no puede confundirse con severidad.
+ *
+ * 2 · GRAFITO Y PAPEL.
+ *     El cromo (cabeceras, navegación, barra de acción) es acero pintado oscuro, como la
+ *     cabina del maquinista. La superficie de trabajo es papel blanco, como la planilla.
+ *     Esa separación da jerarquía sin gastar un solo color, y a pleno sol el contraste
+ *     entre los dos es mucho más fuerte que el gris claro sobre gris claro.
+ *
+ * 3 · EL MÁSTIL ES LA COLUMNA.
+ *     La recorrida física es una subida. Cada zona lleva un `larguero` —un montante
+ *     estructural a la izquierda, pintado según su estado— y apiladas se leen como la
+ *     celosía del mástil. El avance no es una barra fina: es una `escalera` segmentada,
+ *     un tramo por zona, que dice DÓNDE estás y no solo cuánto falta.
+ *
+ * Los bordes son mecanizados, no de tarjeta: 4 px de radio, filete de 1 px, y sombra dura
+ * de 1 px en vez del difuminado gris que aplana toda la jerarquía.
  */
 
+/*
+ * Archivo variable (OFL, ver src/fonts/OFL-Archivo.txt). Se sirve desde el bundle y no
+ * desde Google Fonts a propósito: el service worker solo cachea el mismo origen, así que
+ * una fuente remota dejaría la app sin tipografía justo donde no hay señal.
+ *
+ * Solo el subconjunto `latin`: el español entra entero en U+0000-00FF.
+ * El eje `wdth` (62–125) es lo que hace el trabajo tipográfico — una sola familia que se
+ * comprime para los rótulos y se abre para el texto, como en un plano de ingeniería.
+ */
+@font-face {
+  font-family: "Archivo";
+  font-style: normal;
+  font-weight: 400 800;
+  font-stretch: 62% 125%;
+  font-display: swap;
+  src: url("./fonts/archivo-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215,
+    U+FEFF, U+FFFD;
+}
+
 :root {
-  /* Neutros: acero pintado y zinc galvanizado. Fríos, nunca crema. */
-  --acero-900: #1c1f21;
-  --acero-700: #3b4145;
-  --acero-500: #6b7378;
-  --acero-300: #b9bfc2;
-  --acero-200: #d6dadc;
-  --acero-100: #e8eaea;
-  --acero-050: #f3f5f5;
+  /*
+   * Grafito: acero pintado, frío y azulado. Nunca crema. El 950 y el 900 son cromo —van
+   * con texto blanco—; del 700 para abajo son texto y filetes sobre papel.
+   */
+  --acero-950: #0d1114;
+  --acero-900: #161c21;
+  --acero-800: #232b32;
+  --acero-700: #3a444c;
+  --acero-500: #6a757d;
+  --acero-300: #b0b9bf;
+  --acero-200: #d5dbde;
+  --acero-100: #e7ebed;
+  --acero-050: #f2f5f6;
   --papel: #ffffff;
 
-  /* Señalética */
+  /* Filete claro para dibujar sobre el cromo, donde un borde gris no se ve. */
+  --filete-cromo: rgba(255, 255, 255, 0.12);
+
+  /*
+   * Señalética. Cada color tiene tres formas:
+   *   --x        relleno saturado, texto blanco SOLO en texto grande y bold (umbral 3:1).
+   *              El amarillo nunca: lleva texto oscuro, como el cartel real.
+   *   --x-ink    variante oscura para texto chico sobre fondo claro (umbral 4.5:1).
+   *   --x-suave  fondo tenue para resaltar una fila sin gritar.
+   */
   --critico: #c8102e;
   --critico-ink: #a50d24;
   --critico-suave: #fdeaed;
@@ -45,7 +95,7 @@
   --menor-ink: #7a5b02;
   --menor-suave: #fdf6e0;
 
-  --general: #6b7378;
+  --general: #6a757d;
   --general-ink: #4b5257;
   --general-suave: #eff1f2;
 
@@ -63,13 +113,26 @@
   --nuevo-suave: #e8eefc;
 
   /*
+   * Variantes claras para dibujar señalética SOBRE cromo. El rojo de cartel contra grafito
+   * queda en 2,9:1 y no llega al umbral de 3:1 que WCAG pide para un elemento gráfico con
+   * significado. Es el mismo color de la señal, aclarado lo justo para que se lea en la
+   * chapa oscura — no una paleta nueva.
+   */
+  --critico-luz: #ff5a70;
+  --mayor-luz: #ff9a4d;
+  --menor-luz: #f7cb45;
+  --conforme-luz: #2fbd72;
+  --reiterado-luz: #b48ce8;
+
+  /*
    * Dos escalas tipográficas para dos contextos. En campo la pantalla se lee a un brazo de
-   * distancia, con guantes y con el casco puesto; en oficina se leen 94 filas de un vistazo.
-   * Forzar una sola escala arruina las dos.
+   * distancia, con guantes y con el casco puesto; en oficina se leen 94 filas de un
+   * vistazo. Forzar una sola escala arruina las dos.
    */
   --fs-base: 18px;
-  --radio: 6px;
+  --radio: 4px;
   --borde: 1px;
+  --larguero: 5px;
 
   color-scheme: light;
 }
@@ -83,14 +146,22 @@
 
 /*
  * Modo sol. No es "alto contraste" genérico: es la corrección real para leer a mediodía en
- * la Cuenca. Sube el tamaño, lleva el fondo a blanco puro y engrosa los bordes.
+ * la Cuenca. Sube el tamaño, lleva el papel a blanco puro, el cromo a negro y engrosa
+ * todos los filetes.
  */
 html[data-contraste="alto"] {
   --fs-base: 20px;
+  --acero-950: #000000;
+  --acero-900: #000000;
+  --acero-800: #16191b;
   --acero-100: #ffffff;
   --acero-050: #ffffff;
-  --acero-300: #6b7378;
-  --acero-200: #9aa1a5;
+  --acero-300: #6a757d;
+  --acero-200: #8d959a;
+  --filete-cromo: rgba(255, 255, 255, 0.32);
+  --critico-luz: #ff7286;
+  --mayor-luz: #ffab66;
+  --conforme-luz: #43d489;
   --borde: 2px;
 }
 @media (min-width: 1024px) {
@@ -109,27 +180,55 @@ body {
   margin: 0;
   background: var(--acero-100);
   color: var(--acero-900);
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-family: "Archivo", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-synthesis-weight: none;
   /* El notch del iPhone se come el botón de acción si no se reserva el área segura. */
   padding-bottom: env(safe-area-inset-bottom);
 }
 
 /*
- * Todo número que cambia en vivo va con cifras de ancho fijo. Sin esto, el contador
- * "23/94 · Mástil" baila cada vez que avanza un ítem, y en la mano lo ves temblar.
+ * Los títulos se comprimen; el texto corrido no. Es la convención del plano: el rótulo va
+ * condensado para entrar en el recuadro, la nota va en ancho normal para leerse.
+ */
+h1,
+h2,
+h3,
+h4 {
+  font-stretch: 86%;
+  font-weight: 700;
+  letter-spacing: -0.012em;
+  line-height: 1.12;
+  margin: 0;
+  text-wrap: balance;
+}
+
+/*
+ * Todo número que cambia en vivo va con cifras de ancho fijo y algo condensadas. Sin esto,
+ * el contador "23/94 · Mástil" baila cada vez que avanza un ítem, y en la mano lo ves
+ * temblar.
  */
 .cifras,
 table,
 .kpi-valor,
+.chapa,
 .badge {
   font-variant-numeric: tabular-nums;
+}
+
+.cifras,
+.kpi-valor {
+  font-stretch: 90%;
 }
 
 /* Foco visible siempre. En escritorio esta app se recorre con Tab. */
 :focus-visible {
   outline: 3px solid var(--acero-900);
   outline-offset: 2px;
-  border-radius: 3px;
+  border-radius: 2px;
+}
+/* Sobre cromo oscuro un contorno grafito es invisible: ahí el foco se dibuja en blanco. */
+.cromo :focus-visible {
+  outline-color: #ffffff;
 }
 html[data-contraste="alto"] :focus-visible {
   outline-width: 4px;
@@ -137,18 +236,22 @@ html[data-contraste="alto"] :focus-visible {
 
 @layer components {
   /*
-   * `panel` reemplaza a la vieja `.tarjeta`. La diferencia no es estética: la tarjeta se
-   * ponía alrededor de TODO, con el mismo radio y la misma sombra, y eso aplana la jerarquía
-   * hasta que nada resalta. Un panel se usa solo donde el agrupamiento es real.
+   * ---------------------------------------------------------------- superficies
+   */
+
+  /*
+   * `panel` es la hoja de papel. No lleva sombra difusa —eso aplana la jerarquía hasta que
+   * nada resalta— sino un filete y una sombra dura de 1 px, como una planilla apoyada.
    */
   .panel {
     @apply bg-[var(--papel)];
     border: var(--borde) solid var(--acero-200);
     border-radius: var(--radio);
+    box-shadow: 0 1px 0 rgba(13, 17, 20, 0.05);
   }
 
   .panel-titulo {
-    @apply flex items-baseline gap-2 px-4 pb-2 pt-3 text-lg font-semibold;
+    @apply flex items-baseline gap-2 px-4 pb-2 pt-3 text-lg;
   }
 
   .panel-cuerpo {
@@ -156,16 +259,150 @@ html[data-contraste="alto"] :focus-visible {
   }
 
   /*
+   * `cromo` es el acero pintado: cabeceras, navegación y barra de acción. Separa lo que
+   * la app ES de lo que la app MUESTRA, y a pleno sol el salto grafito/papel se ve desde
+   * mucho más lejos que dos grises claros pegados.
+   */
+  .cromo {
+    background: var(--acero-950);
+    color: #ffffff;
+  }
+  .cromo-borde-abajo {
+    box-shadow: inset 0 -1px 0 var(--filete-cromo);
+  }
+  .cromo-borde-arriba {
+    box-shadow: inset 0 1px 0 var(--filete-cromo);
+  }
+
+  /*
+   * El montante del mástil. Una zona con hallazgos se pinta en rojo, una terminada en
+   * verde, una pendiente en gris: apiladas, las secciones se leen como la celosía que se
+   * va subiendo.
+   */
+  .larguero {
+    border-left: var(--larguero) solid var(--acero-300);
+  }
+  .larguero-ok {
+    border-left-color: var(--conforme);
+  }
+  .larguero-no {
+    border-left-color: var(--critico);
+  }
+  .larguero-may {
+    border-left-color: var(--mayor);
+  }
+  .larguero-curso {
+    border-left-color: var(--acero-900);
+  }
+
+  /*
+   * ---------------------------------------------------------------- identificación
+   */
+
+  /*
+   * `chapa`: el número de ítem como la chapa estampada de un componente del equipo. No es
+   * adorno — es el identificador con el que se habla del hallazgo por radio y con el que
+   * aparece en el informe, así que merece leerse de un vistazo y no como texto gris.
+   */
+  .chapa {
+    @apply inline-flex shrink-0 items-center justify-center bg-[var(--acero-900)] text-white;
+    font-stretch: 80%;
+    font-weight: 700;
+    font-size: 0.8125rem;
+    letter-spacing: 0.01em;
+    padding: 0.0625rem 0.3125rem;
+    border-radius: 3px;
+    line-height: 1.45;
+  }
+  .chapa-hueca {
+    @apply bg-transparent text-[var(--acero-700)];
+    box-shadow: inset 0 0 0 1px var(--acero-300);
+  }
+
+  /*
+   * Badge de señalética. Chico, sólido, en mayúsculas: acá las versalitas no son cromo
+   * decorativo, es la convención del cartel de seguridad que la cuadrilla ya lee.
+   */
+  .badge {
+    @apply inline-flex items-center whitespace-nowrap text-white;
+    font-stretch: 84%;
+    font-weight: 700;
+    font-size: 0.6875rem;
+    letter-spacing: 0.045em;
+    text-transform: uppercase;
+    padding: 0.125rem 0.4rem;
+    border-radius: 3px;
+    line-height: 1.55;
+  }
+
+  /*
+   * ---------------------------------------------------------------- progreso
+   */
+
+  /*
+   * La escalera: un tramo por zona, del piso a la corona. Una barra continua dice cuánto
+   * falta; esto dice además dónde estás parado y qué tramo quedó a medias, que es la
+   * pregunta que uno se hace a mitad de una recorrida de 94 ítems.
+   */
+  .escalera {
+    @apply flex w-full gap-[2px];
+  }
+  .escalera > * {
+    @apply h-2 flex-1 overflow-hidden rounded-[1px] bg-[var(--acero-200)];
+  }
+  .cromo .escalera > * {
+    background: rgba(255, 255, 255, 0.16);
+  }
+  /*
+   * El relleno del tramo lleva clase propia y no un color de Tailwind porque tiene que
+   * invertirse sobre cromo: grafito sobre papel no se ve contra la chapa oscura, y el rojo
+   * de cartel tampoco llega al 3:1 ahí.
+   */
+  .escalera-tramo-relleno {
+    @apply block h-full;
+    background: var(--acero-900);
+  }
+  .escalera-tramo-relleno.es-ok {
+    background: var(--conforme);
+  }
+  .escalera-tramo-relleno.es-no {
+    background: var(--critico);
+  }
+  .cromo .escalera-tramo-relleno {
+    background: #ffffff;
+  }
+  .cromo .escalera-tramo-relleno.es-ok {
+    background: var(--conforme-luz);
+  }
+  .cromo .escalera-tramo-relleno.es-no {
+    background: var(--critico-luz);
+  }
+  /* El tramo en el que se está parado se rodea con un filete; sobre cromo, en blanco. */
+  .escalera-actual {
+    box-shadow: inset 0 0 0 1px var(--acero-900);
+  }
+  .cromo .escalera-actual {
+    box-shadow: inset 0 0 0 1px #ffffff;
+  }
+
+  /*
+   * ---------------------------------------------------------------- controles
+   */
+
+  /*
    * Botón de estado. Es el control de un tablero de comando, no un botón de web: alto fijo
-   * de 72px (requisito de operación con guantes), texto grande, y hundido al presionar.
+   * de 72 px (requisito de operación con guantes), texto grande, y hundido al presionar.
    * Nada de hover: en campo no existe el puntero.
    */
   .boton-estado {
-    @apply relative flex w-full items-center justify-center gap-2 font-bold uppercase text-white;
+    @apply relative flex w-full items-center justify-center gap-2 text-white;
     min-height: 72px;
     border-radius: var(--radio);
-    font-size: 1.25rem;
-    letter-spacing: 0.02em;
+    font-stretch: 86%;
+    font-weight: 700;
+    font-size: 1.3125rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
     transition: transform 90ms ease-out;
@@ -177,8 +414,8 @@ html[data-contraste="alto"] :focus-visible {
     opacity: 0.35;
   }
 
-  /* El seleccionado se marca con un borde grueso del color del acero, no con un tinte suave:
-     a pleno sol un tinte no se distingue. */
+  /* El seleccionado se marca con un anillo grueso del color del acero, no con un tinte
+     suave: a pleno sol un tinte no se distingue. */
   .boton-estado[aria-pressed="true"] {
     box-shadow:
       inset 0 0 0 4px var(--papel),
@@ -186,10 +423,13 @@ html[data-contraste="alto"] :focus-visible {
   }
 
   .boton-primario {
-    @apply flex w-full items-center justify-center bg-[var(--acero-900)] font-bold text-white;
+    @apply flex w-full items-center justify-center bg-[var(--acero-900)] text-white;
     min-height: 56px;
     border-radius: var(--radio);
+    font-stretch: 88%;
+    font-weight: 700;
     font-size: 1.0625rem;
+    letter-spacing: 0.005em;
     padding: 0 1rem;
     touch-action: manipulation;
     transition: transform 90ms ease-out;
@@ -202,10 +442,20 @@ html[data-contraste="alto"] :focus-visible {
     transform: none;
   }
 
+  /* Sobre cromo el primario se invierte: chapa blanca, texto grafito. */
+  .cromo .boton-primario {
+    @apply bg-[var(--papel)] text-[var(--acero-950)];
+  }
+  .cromo .boton-primario:disabled {
+    @apply bg-[var(--acero-700)] text-[var(--acero-300)];
+  }
+
   .boton-secundario {
-    @apply inline-flex items-center justify-center bg-[var(--papel)] font-semibold text-[var(--acero-900)];
+    @apply inline-flex items-center justify-center bg-[var(--papel)] text-[var(--acero-900)];
     min-height: 48px;
     padding: 0 0.875rem;
+    font-stretch: 90%;
+    font-weight: 600;
     border: 2px solid var(--acero-900);
     border-radius: var(--radio);
     touch-action: manipulation;
@@ -219,21 +469,17 @@ html[data-contraste="alto"] :focus-visible {
     transform: none;
   }
 
-  .boton-peligro {
-    @apply border-[var(--critico-ink)] text-[var(--critico-ink)];
+  .cromo .boton-secundario {
+    @apply bg-transparent text-white;
+    border-color: rgba(255, 255, 255, 0.5);
+  }
+  .cromo .boton-secundario:disabled {
+    @apply text-[var(--acero-500)];
+    border-color: rgba(255, 255, 255, 0.2);
   }
 
-  /*
-   * Badge de señalética. Chico, sólido, en mayúsculas: acá las versalitas no son cromo
-   * decorativo, es la convención del cartel de seguridad que la cuadrilla ya lee.
-   */
-  .badge {
-    @apply inline-flex items-center whitespace-nowrap font-bold uppercase text-white;
-    font-size: 0.6875rem;
-    letter-spacing: 0.04em;
-    padding: 0.125rem 0.4rem;
-    border-radius: 3px;
-    line-height: 1.5;
+  .boton-peligro {
+    @apply border-[var(--critico-ink)] text-[var(--critico-ink)];
   }
 
   .campo {
@@ -242,6 +488,7 @@ html[data-contraste="alto"] :focus-visible {
     border-radius: var(--radio);
     padding: 0.5rem 0.75rem;
     font-size: 1rem;
+    font-family: inherit;
     min-height: 48px;
   }
   .campo:focus {
@@ -250,12 +497,15 @@ html[data-contraste="alto"] :focus-visible {
   }
 
   .etiqueta {
-    @apply block text-sm font-semibold text-[var(--acero-700)];
+    @apply block text-sm text-[var(--acero-700)];
+    font-stretch: 92%;
+    font-weight: 600;
   }
 
   /*
    * Los cuatro estados, apilados. En horizontal el alto de pantalla se derrumba y cuatro
-   * botones de 72px no entran: pasan a 2x2, que además deja los dos más usados bajo el pulgar.
+   * botones de 72 px no entran: pasan a 2x2, que además deja los dos más usados bajo el
+   * pulgar.
    */
   .grid-estados {
     @apply grid gap-2.5;
@@ -282,6 +532,25 @@ html[data-contraste="alto"] :focus-visible {
   }
   .fila:last-child {
     border-bottom: 0;
+  }
+
+  /*
+   * Pestañas sobre cromo. La activa es una chapa blanca; las otras son texto al 70 %. Sin
+   * subrayados ni bordes: el contraste ya alcanza y los filetes ensucian una barra que en
+   * celular tiene cinco elementos y scrollea.
+   */
+  .tab-cromo {
+    @apply min-h-[38px] whitespace-nowrap px-3 text-sm text-white/70;
+    font-stretch: 90%;
+    font-weight: 600;
+    border-radius: 3px;
+    touch-action: manipulation;
+  }
+  .tab-cromo[aria-current="page"] {
+    @apply bg-[var(--papel)] text-[var(--acero-950)];
+  }
+  .tab-cromo:disabled {
+    @apply text-white/25;
   }
 }
 

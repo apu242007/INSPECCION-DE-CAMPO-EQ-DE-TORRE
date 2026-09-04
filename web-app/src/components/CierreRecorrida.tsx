@@ -50,7 +50,7 @@ export function CierreRecorrida({
       <h3 className="text-lg font-semibold">Cerrar recorrida</h3>
 
       {resultado.motivos.length > 0 && (
-        <div className="rounded-lg border-2 border-mayor-ink bg-mayor-suave p-3">
+        <div className="rounded border-2 border-mayor-ink bg-mayor-suave p-3">
           <p className="font-bold">No se puede cerrar todavía:</p>
           <ul className="ml-5 mt-1 list-disc text-sm">
             {resultado.motivos.map((m) => (

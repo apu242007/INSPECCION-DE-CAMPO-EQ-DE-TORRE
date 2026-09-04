@@ -52,14 +52,14 @@ export function SelectorEstado({ actual, onElegir, deshabilitado, etiqueta }: Pr
               vibrar();
               onElegir(o.estado);
             }}
-            className={`relative flex min-h-[46px] items-center justify-center rounded px-1
-                        py-1 text-center text-[0.72rem] font-bold uppercase leading-[1.05]
-                        tracking-tight transition-transform active:translate-y-px
+            className={`relative flex min-h-[46px] items-center justify-center rounded-[3px]
+                        px-1 py-1 text-center text-[0.72rem] uppercase leading-[1.05]
+                        transition-transform active:translate-y-px
                         disabled:opacity-40 sm:text-[0.8rem]
                         ${o.clase} ${
                           elegido ? "ring-[3px] ring-acero-900 ring-offset-1" : "opacity-90"
                         }`}
-            style={{ touchAction: "manipulation" }}
+            style={{ touchAction: "manipulation", fontStretch: "82%", fontWeight: 700 }}
           >
             {/*
               La etiqueta se parte en dos lineas antes que recortarse: "EN PROCESO" cortado a

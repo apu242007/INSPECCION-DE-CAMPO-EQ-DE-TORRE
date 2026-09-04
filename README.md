@@ -209,6 +209,9 @@ web-app/
 │   │   └── excelExport.ts            # SheetJS
 │   ├── storage.ts                    # IndexedDB: borrador, cola, cache de historial
 │   ├── services/{api,sync}.ts        # 5 flujos + cola con reintentos + modo demo
+│   ├── index.css                     # sistema de diseño "Torre" (leer el comentario de arriba)
+│   ├── ui.ts                         # vocabulario visual compartido: UI, PDF y Excel
+│   ├── fonts/archivo-latin.woff2     # Archivo variable (OFL), servida desde el bundle
 │   ├── components/campo/             # modo campo: paso a paso, cámara, toggle, nota de voz
 │   ├── components/oficina/           # modo oficina: tabla y detalle editable
 │   └── pages/
@@ -217,6 +220,29 @@ web-app/
 sharepoint/Setup-Columns-EQT.ps1      # columnas idempotentes (body UTF-8, BOM)
 power-automate/Flow-EQT-0{1..5}.md    # cada flujo con sus fx exactas
 ```
+
+---
+
+## Sistema de diseño — "Torre"
+
+El detalle completo está en el comentario de cabecera de `web-app/src/index.css`. En corto,
+tres reglas que conviene no romper sin pensarlo:
+
+1. **Un color saturado = un significado.** Rojo, naranja, amarillo y verde son la señalética
+   del yacimiento; el violeta es "reiterativo". Todo lo demás de la interfaz es acromático.
+   Si el cromo tuviera color, competiría con el único color que acá significa algo.
+2. **Grafito y papel.** Cabeceras, navegación lateral y barra de acción van en cromo oscuro
+   (`.cromo`); el contenido va en papel blanco. A pleno sol ese salto se ve mucho mejor que
+   dos grises claros pegados. Sobre cromo se usan las variantes `--x-luz` de la señalética,
+   porque el rojo de cartel contra grafito no llega al 3:1.
+3. **El mástil es la columna.** Cada zona lleva su `larguero` pintado por su estado, y el
+   avance es una `escalera` segmentada (un tramo por zona) en vez de una barra continua.
+
+Tipografía: **Archivo variable** (OFL, `src/fonts/OFL-Archivo.txt`), subconjunto `latin`,
+servida desde el bundle. No se carga desde Google Fonts a propósito: el service worker solo
+cachea el mismo origen, así que una fuente remota dejaría la app sin tipografía justo donde
+no hay señal. El eje `wdth` hace el trabajo — condensada para rótulos y cifras, ancho normal
+para el texto corrido, como un plano de ingeniería.
 
 ---
 

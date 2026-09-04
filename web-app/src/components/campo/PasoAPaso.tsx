@@ -6,6 +6,7 @@ import type { Estado, Foto, ItemCatalogo, Origen, Recorrida, Reiteracion } from 
 import { CLASE_CRITICIDAD, ETIQUETA_CRITICIDAD, vibrar } from "../../ui";
 import type { UseRecorrida } from "../../hooks/useRecorrida";
 import { ordenarItems } from "../../hooks/useRecorrida";
+import { Escalera } from "../Escalera";
 import { RielZonas, estadoPorZona } from "../RielZonas";
 import { BotonesEstado } from "./BotonesEstado";
 import { CapturaFoto } from "./CapturaFoto";
@@ -138,46 +139,39 @@ export function PasoAPaso({ ctx, recorrida, onSalir, onAgregarAdicional }: Props
   return (
     <div className="flex min-h-[100dvh] bg-acero-100">
       {/* El riel solo aparece cuando hay ancho para él sin robárselo al ítem. */}
-      <aside className="hidden w-60 shrink-0 border-r border-acero-200 bg-papel md:block lg:w-64">
+      <aside className="cromo hidden w-60 shrink-0 md:block lg:w-64">
         <RielZonas zonas={zonas} zonaActual={item.zona} onIrAZona={irAZona} />
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-10 border-b border-acero-200 bg-papel px-3 py-2 md:px-5">
+        <header className="cromo cromo-borde-abajo sticky top-0 z-10 px-3 py-2 md:px-5">
           <div className="flex items-center gap-3">
-            <button type="button" className="text-base font-semibold underline" onClick={onSalir}>
+            <button type="button" className="text-base text-white/70 underline" onClick={onSalir}>
               ← Salir
             </button>
-            <span className="cifras flex-1 truncate text-center text-base font-semibold md:text-left">
-              <span className="tabular-nums">
+            <span className="cifras flex-1 truncate text-center text-base text-white md:text-left">
+              <span style={{ fontWeight: 700 }}>
                 {indice + 1}/{items.length}
               </span>
-              <span className="text-acero-500"> · {item.zona}</span>
+              <span className="text-white/60"> · {item.zona}</span>
             </span>
-            <span className="cifras shrink-0 text-sm text-acero-500">{revisados} revisados</span>
+            <span className="cifras shrink-0 text-sm text-white/60">{revisados} revisados</span>
           </div>
 
-          {/* En celular no entra el riel, así que el progreso vuelve a ser una barra. */}
-          <div
-            className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-acero-200 md:hidden"
-            role="progressbar"
-            aria-valuenow={revisados}
-            aria-valuemin={0}
-            aria-valuemax={items.length}
-            aria-label="Ítems revisados"
-          >
-            <div
-              className="h-full bg-acero-900"
-              style={{ width: `${(revisados / items.length) * 100}%` }}
-            />
+          {/*
+            En celular no entra el riel, así que la escalera hace su trabajo: un tramo por
+            zona, con el tramo actual marcado y tocable para saltar.
+          */}
+          <div className="mt-2 md:hidden">
+            <Escalera zonas={zonas} zonaActual={item.zona} onIrAZona={irAZona} />
           </div>
         </header>
 
         <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center gap-3 p-3 md:p-5">
           {/* El enunciado del ítem es lo único que se lee en altura: va grande y sin caja. */}
-          <div className="panel p-4 md:p-5">
+          <div className="panel larguero larguero-curso p-4 md:p-5">
             <div className="mb-3 flex flex-wrap items-center gap-2">
-              <span className="cifras text-base font-semibold text-acero-500">#{item.id}</span>
+              <span className="chapa text-base">#{item.id}</span>
               <span className={`badge ${CLASE_CRITICIDAD[item.criticidadRef]}`}>
                 {ETIQUETA_CRITICIDAD[item.criticidadRef]}
               </span>
@@ -191,7 +185,7 @@ export function PasoAPaso({ ctx, recorrida, onSalir, onAgregarAdicional }: Props
               )}
               <button
                 type="button"
-                className="ml-auto flex h-10 w-10 items-center justify-center rounded-full border-2 border-acero-900 text-lg font-semibold"
+                className="ml-auto flex h-10 w-10 items-center justify-center rounded-[3px] border-2 border-acero-900 text-lg font-bold"
                 aria-expanded={ayuda}
                 aria-label="Ver el hallazgo típico de este ítem"
                 onClick={() => setAyuda((v) => !v)}
@@ -203,7 +197,7 @@ export function PasoAPaso({ ctx, recorrida, onSalir, onAgregarAdicional }: Props
             <p className="text-[1.15rem] leading-snug md:text-xl">{item.item}</p>
 
             {ayuda && (
-              <div className="mt-4 border-l-4 border-acero-900 bg-acero-50 p-3 text-base">
+              <div className="mt-4 border-l-[3px] border-acero-900 bg-acero-50 p-3 text-base">
                 <p className="font-semibold">Cómo se redacta si falla</p>
                 <p className="mt-1">{item.hallazgoTipico}</p>
                 {HALLAZGO_DERIVADO.has(item.id) && (
@@ -261,7 +255,7 @@ export function PasoAPaso({ ctx, recorrida, onSalir, onAgregarAdicional }: Props
         </main>
 
         {/* Zona del pulgar. Todo lo accionable vive acá abajo, nada arriba. */}
-        <footer className="sticky bottom-0 border-t border-acero-200 bg-papel p-3 md:px-5">
+        <footer className="cromo cromo-borde-arriba sticky bottom-0 p-3 md:px-5">
           <div className="mx-auto w-full max-w-3xl space-y-2.5">
             {enEvidencia ? (
               <>
@@ -327,7 +321,7 @@ export function PasoAPaso({ ctx, recorrida, onSalir, onAgregarAdicional }: Props
       {toast && (
         <div
           role="status"
-          className="pointer-events-none fixed inset-x-0 top-1/2 z-50 mx-auto w-fit rounded bg-acero-900 px-8 py-4 text-2xl font-semibold text-white"
+          className="pointer-events-none fixed inset-x-0 top-1/2 z-50 mx-auto w-fit rounded-[3px] bg-acero-950 px-8 py-4 text-2xl font-bold text-white"
         >
           {toast}
         </div>

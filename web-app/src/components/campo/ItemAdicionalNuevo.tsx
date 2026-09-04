@@ -71,7 +71,7 @@ export function ItemAdicionalNuevo({
   }
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-white">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-papel">
       <div
         ref={dialogRef}
         tabIndex={-1}
@@ -100,7 +100,7 @@ export function ItemAdicionalNuevo({
                 type="button"
                 aria-pressed={zona === z}
                 className={`min-h-[56px] rounded-lg border-2 px-2 text-sm font-semibold ${
-                  zona === z ? "border-acero-900 bg-acero-900 text-white" : "border-acero-300 bg-white"
+                  zona === z ? "border-acero-900 bg-acero-900 text-white" : "border-acero-300 bg-papel"
                 }`}
                 onClick={() => setZona(z)}
               >
@@ -158,7 +158,7 @@ export function ItemAdicionalNuevo({
         )}
       </div>
 
-      <div className="sticky bottom-0 border-t-2 border-acero-200 bg-white p-3">
+      <div className="sticky bottom-0 border-t-2 border-acero-200 bg-papel p-3">
         <button type="button" className="boton-primario" disabled={!puedeGuardar} onClick={guardar}>
           {sinFoto ? "Falta foto" : "Guardar ítem detectado"}
         </button>

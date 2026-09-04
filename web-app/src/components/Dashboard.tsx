@@ -23,6 +23,7 @@ import type { Criticidad, ItemCatalogo, Recorrida, RecorridaHistorial } from "..
 import {
   CLASE_CRITICIDAD,
   CLASE_SEMAFORO,
+  COLOR_CRITICIDAD,
   COLOR_ESTADO,
   ETIQUETA_CRITICIDAD,
   EXPLICACION_SEMAFORO,
@@ -46,36 +47,51 @@ export function Dashboard({ recorrida, catalogo, historial, onAbrirItem }: Props
   const diasAuditoria = diasHastaAuditoria(recorrida, hoy);
   const equipo = useMemo(() => analisisEquipo(historial, catalogo), [historial, catalogo]);
 
+  // Los colores salen del vocabulario compartido: un mismo concepto no puede tener dos rojos
+  // distintos entre el badge y la barra que lo cuenta.
   const datosCriticidad = (["CRITICA", "MAYOR", "MENOR", "GENERAL"] as Criticidad[]).map((c) => ({
     nombre: ETIQUETA_CRITICIDAD[c],
     cantidad: kpis.porCriticidad[c],
-    color: c === "CRITICA" ? "#b91c1c" : c === "MAYOR" ? "#c2410c" : c === "MENOR" ? "#a16207" : "#52525b",
+    color: COLOR_CRITICIDAD[c],
   }));
 
   const datosOrigen = [
     { nombre: "Nuevos", valor: kpis.noOkNuevos, color: "#1d4ed8" },
-    { nombre: "Reiterativos", valor: kpis.noOkReiterativos, color: "#6d28d9" },
+    { nombre: "Reiterativos", valor: kpis.noOkReiterativos, color: "#6d3f9e" },
   ].filter((d) => d.valor > 0);
 
   return (
     <div className="space-y-4">
-      <div className={`rounded-lg p-4 text-white ${CLASE_SEMAFORO[semaforo]}`}>
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <span className="text-2xl font-semibold">SEMÁFORO {semaforo}</span>
-          <span className="text-xl font-semibold">{kpis.pctAvance}% de avance</span>
+      {/* El titular de la pantalla: el color del cartel, a tamaño de cartel. */}
+      <div className={`rounded p-4 text-white md:p-5 ${CLASE_SEMAFORO[semaforo]}`}>
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+          <span
+            className="text-[1.75rem] leading-none md:text-[2.25rem]"
+            style={{ fontStretch: "82%", fontWeight: 800, letterSpacing: "-0.01em" }}
+          >
+            SEMÁFORO {semaforo}
+          </span>
+          <span className="cifras text-xl leading-none" style={{ fontWeight: 700 }}>
+            {kpis.pctAvance}% de avance
+          </span>
         </div>
-        <p className="mt-1 text-sm opacity-90">{EXPLICACION_SEMAFORO[semaforo]}</p>
+        <p className="mt-2 max-w-2xl text-sm text-white/85">{EXPLICACION_SEMAFORO[semaforo]}</p>
       </div>
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-8">
         <Kpi titulo="Total" valor={kpis.total} />
-        <Kpi titulo="OK" valor={kpis.ok} color="text-conforme-ink" />
-        <Kpi titulo="NO OK" valor={kpis.noOk} color="text-critico-ink" />
-        <Kpi titulo="En proceso" valor={kpis.enProc} color="text-mayor-ink" />
+        <Kpi titulo="OK" valor={kpis.ok} color="text-conforme-ink" regla="border-t-conforme" />
+        <Kpi titulo="NO OK" valor={kpis.noOk} color="text-critico-ink" regla="border-t-critico" />
+        <Kpi titulo="En proceso" valor={kpis.enProc} color="text-mayor-ink" regla="border-t-mayor" />
         <Kpi titulo="N/A" valor={kpis.na} />
         <Kpi titulo="Sin revisar" valor={kpis.sinRevisar} />
-        <Kpi titulo="Nuevos" valor={kpis.noOkNuevos} color="text-nuevo-ink" />
-        <Kpi titulo="Reiterativos" valor={kpis.noOkReiterativos} color="text-reiterado-ink" />
+        <Kpi titulo="Nuevos" valor={kpis.noOkNuevos} color="text-nuevo-ink" regla="border-t-nuevo" />
+        <Kpi
+          titulo="Reiterativos"
+          valor={kpis.noOkReiterativos}
+          color="text-reiterado-ink"
+          regla="border-t-reiterado"
+        />
       </div>
 
       {(diasAuditoria !== null || kpis.escalados > 0) && (
@@ -285,7 +301,7 @@ export function Dashboard({ recorrida, catalogo, historial, onAbrirItem }: Props
                 <XAxis dataKey="folio" fontSize={10} angle={-20} textAnchor="end" height={60} />
                 <YAxis allowDecimals={false} />
                 <Tooltip />
-                <Bar dataKey="noConformes" name="No conformes" fill="#b91c1c" />
+                <Bar dataKey="noConformes" name="No conformes" fill={COLOR_CRITICIDAD.CRITICA} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -316,10 +332,27 @@ export function Dashboard({ recorrida, catalogo, historial, onAbrirItem }: Props
   );
 }
 
-function Kpi({ titulo, valor, color }: { titulo: string; valor: number; color?: string }) {
+/**
+ * Un KPI. El montante de color arriba dice de qué familia es el número sin repetir la palabra
+ * en un badge: los que no pertenecen a la señalética (Total, N/A, Sin revisar) no llevan
+ * ninguno, y esa ausencia también informa.
+ */
+function Kpi({
+  titulo,
+  valor,
+  color,
+  regla,
+}: {
+  titulo: string;
+  valor: number;
+  color?: string;
+  regla?: string;
+}) {
   return (
-    <div className="panel px-3 py-3">
-      <p className={`kpi-valor text-3xl font-semibold leading-none ${color ?? ""}`}>{valor}</p>
+    <div className={`panel border-t-[3px] px-3 py-3 ${regla ?? "border-t-acero-300"}`}>
+      <p className={`kpi-valor text-3xl leading-none ${color ?? ""}`} style={{ fontWeight: 700 }}>
+        {valor}
+      </p>
       <p className="mt-1.5 text-sm leading-tight text-acero-700">{titulo}</p>
     </div>
   );

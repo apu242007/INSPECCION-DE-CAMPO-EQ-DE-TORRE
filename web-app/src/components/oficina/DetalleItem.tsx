@@ -57,7 +57,7 @@ export function DetalleItem({ ctx, recorrida, itemId, responsablesFrecuentes, on
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-base font-semibold text-acero-500">#{itemId}</span>
+        <span className="chapa text-base">#{itemId}</span>
         <span className={`badge ${CLASE_CRITICIDAD[criticidad]}`}>
           {ETIQUETA_CRITICIDAD[criticidad]}
         </span>
@@ -80,7 +80,7 @@ export function DetalleItem({ ctx, recorrida, itemId, responsablesFrecuentes, on
       <p className="text-base leading-snug">{info.item}</p>
 
       {ayuda && (
-        <div className="rounded border-l-4 border-acero-900 bg-acero-50 p-3 text-sm">
+        <div className="rounded-[3px] border-l-[3px] border-acero-900 bg-acero-50 p-3 text-sm">
           <p className="font-bold">Cómo se redacta si falla:</p>
           <p className="mt-1">{info.hallazgoTipico}</p>
         </div>

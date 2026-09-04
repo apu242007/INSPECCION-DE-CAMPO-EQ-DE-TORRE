@@ -64,8 +64,13 @@ export function RielZonas({ zonas, zonaActual, onIrAZona, compacto }: Props) {
   const deAbajoHaciaArriba = useMemo(() => [...zonas].reverse(), [zonas]);
 
   return (
+    /* Vive dentro de un contenedor `.cromo`: acá el mástil es chapa oscura y los travesaños
+       se pintan con las variantes claras de la señalética. */
     <nav aria-label="Zonas de la recorrida" className="flex h-full flex-col">
-      <p className="px-3 pb-1 pt-3 text-sm font-semibold text-acero-700">
+      <p
+        className="px-4 pb-2 pt-3 text-xs uppercase tracking-[0.12em] text-white/55"
+        style={{ fontStretch: "88%", fontWeight: 700 }}
+      >
         Recorrida
       </p>
 
@@ -81,14 +86,14 @@ export function RielZonas({ zonas, zonaActual, onIrAZona, compacto }: Props) {
                 aria-current={actual ? "step" : undefined}
                 onClick={() => onIrAZona(z.zona)}
                 className={`relative flex w-full items-center gap-2 py-2 pl-4 pr-3 text-left ${
-                  actual ? "bg-acero-900 text-white" : "text-acero-900"
+                  actual ? "bg-papel text-acero-950" : "text-white/80"
                 }`}
               >
                 {/* El larguero del mástil: una línea continua que atraviesa todo el riel. */}
                 <span
                   aria-hidden
                   className={`absolute bottom-0 left-[9px] top-0 w-[3px] ${
-                    completa ? "bg-conforme" : "bg-acero-300"
+                    completa ? "bg-conforme-luz" : actual ? "bg-acero-300" : "bg-white/20"
                   }`}
                 />
                 {/* El travesaño: se pinta lleno cuando la zona está terminada. */}
@@ -96,32 +101,31 @@ export function RielZonas({ zonas, zonaActual, onIrAZona, compacto }: Props) {
                   aria-hidden
                   className={`absolute left-[4px] h-[13px] w-[13px] rounded-full border-2 ${
                     z.noConformes > 0
-                      ? "border-critico bg-critico"
+                      ? "border-critico-luz bg-critico-luz"
                       : completa
-                        ? "border-conforme bg-conforme"
+                        ? "border-conforme-luz bg-conforme-luz"
                         : actual
-                          ? "border-white bg-white"
-                          : "border-acero-300 bg-papel"
+                          ? "border-acero-950 bg-acero-950"
+                          : "border-white/40 bg-transparent"
                   }`}
                 />
 
                 <span className="ml-3 min-w-0 flex-1">
-                  <span className="block truncate text-[0.9rem] font-semibold leading-tight">
+                  <span
+                    className="block truncate text-[0.9rem] leading-tight"
+                    style={{ fontStretch: "90%", fontWeight: 600 }}
+                  >
                     {z.zona}
                   </span>
                   {!compacto && (
                     <span
                       className={`cifras block text-xs leading-tight ${
-                        actual ? "text-acero-300" : "text-acero-500"
+                        actual ? "text-acero-700" : "text-white/60"
                       }`}
                     >
                       {z.revisados}/{z.total}
                       {z.noConformes > 0 && (
-                        <span
-                          className={
-                            actual ? " text-white" : " text-critico-ink"
-                          }
-                        >
+                        <span className={actual ? " text-critico-ink" : " text-critico-luz"}>
                           {" "}
                           · {z.noConformes} NO OK
                         </span>
@@ -135,7 +139,10 @@ export function RielZonas({ zonas, zonaActual, onIrAZona, compacto }: Props) {
         })}
       </ol>
 
-      <p className="border-t border-acero-200 px-4 py-2 text-xs text-acero-500">
+      <p
+        className="px-4 py-2 text-xs text-white/55"
+        style={{ boxShadow: "inset 0 1px 0 var(--filete-cromo)" }}
+      >
         De abajo hacia arriba, como se recorre el equipo.
       </p>
     </nav>

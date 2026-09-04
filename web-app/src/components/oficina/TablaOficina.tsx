@@ -40,8 +40,8 @@ export function TablaOficina({
   return (
     <div className="tabla-scroll">
       <table className="w-full min-w-[900px] text-sm">
-        <thead className="sticky top-0 bg-acero-50">
-          <tr className="border-b-2 border-acero-300 text-left">
+        <thead className="sticky top-0 bg-acero-50 text-acero-700">
+          <tr className="border-b border-acero-300 text-left">
             <th className="p-2">#</th>
             <th className="p-2">Zona</th>
             <th className="p-2">Crit.</th>
@@ -69,9 +69,11 @@ export function TablaOficina({
                 } ${faltaFoto ? "bg-critico-suave" : ""}`}
                 onClick={() => onAbrirItem(r.itemId)}
               >
-                <td className="p-2 font-bold">
-                  #{r.itemId}
-                  {idsAdicionales.has(r.itemId) && <span className="ml-1 text-xs">＋</span>}
+                <td className="p-2">
+                  <span className="chapa">#{r.itemId}</span>
+                  {idsAdicionales.has(r.itemId) && (
+                    <span className="ml-1 text-xs text-acero-500">＋</span>
+                  )}
                 </td>
                 <td className="p-2 whitespace-nowrap">{info?.zona}</td>
                 <td className="p-2">

@@ -2,7 +2,9 @@ import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from "react
 import { useNavigate, useParams } from "react-router-dom";
 import { BarraAccion } from "../components/BarraAccion";
 import { CierreRecorrida } from "../components/CierreRecorrida";
+import { Escalera } from "../components/Escalera";
 import { FILTROS_VACIOS, ListaZonas, type Filtros } from "../components/ListaZonas";
+import { estadoPorZona } from "../components/RielZonas";
 import { SyncPanel } from "../components/SyncPanel";
 import { ItemAdicionalNuevo, siguienteIdAdicional } from "../components/campo/ItemAdicionalNuevo";
 import { PasoAPaso } from "../components/campo/PasoAPaso";
@@ -14,7 +16,7 @@ import { calcularSemaforo } from "../lib/metrics";
 import { cerrarEnSharePoint, enviarRecorrida, MAX_PDF_BYTES } from "../services/sync";
 import * as storage from "../storage";
 import type { Estado, Foto, ItemAdicional, RegistroItem } from "../types";
-import { CLASE_SEMAFORO, fechaAR } from "../ui";
+import { CLASE_SEMAFORO_LUZ, fechaAR } from "../ui";
 
 /**
  * recharts, jsPDF y SheetJS se cargan bajo demanda. En campo, con señal mala, no tiene
@@ -194,12 +196,18 @@ export function RecorridaPage() {
     [recorrida, ctx.catalogoPorId],
   );
 
+  // Estado por zona: alimenta la escalera de la cabecera y el riel de escritorio.
+  const zonas = useMemo(
+    () => (recorrida ? estadoPorZona(recorrida, ctx.catalogoPorId, ctx.ordenZonas) : []),
+    [recorrida, ctx.catalogoPorId, ctx.ordenZonas],
+  );
+
   if (ctx.cargando) return <p className="p-8 text-center text-acero-500">Cargando la recorrida…</p>;
   if (!recorrida) {
     return (
       <div className="p-6">
         <p className="text-lg font-semibold">No se encontró la recorrida.</p>
-        <button className="boton-primario mt-3 w-auto px-5" onClick={() => navigate("/")}>
+        <button className="boton-primario mt-3 w-fit px-5" onClick={() => navigate("/")}>
           Volver al listado
         </button>
       </div>
@@ -233,35 +241,51 @@ export function RecorridaPage() {
 
   return (
     <div className="min-h-[100dvh] bg-acero-100">
-      <header className="sticky top-0 z-20 border-b border-acero-200 bg-papel">
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2 md:px-6">
-          <button className="text-[0.95rem] font-semibold underline" onClick={() => navigate("/")}>
+      {/*
+        La cabecera es cromo: identifica el equipo, no el contenido. Debajo va la escalera —un
+        tramo por zona— que reemplaza a la barra de avance: dice qué tramo quedó a medias, que
+        es la pregunta real a mitad de una recorrida de 94 ítems.
+      */}
+      <header className="cromo cromo-borde-abajo sticky top-0 z-20">
+        <div className="mx-auto flex w-full max-w-[1600px] flex-wrap items-center gap-x-3 gap-y-1 px-3 pt-2 md:px-6">
+          <button
+            className="shrink-0 text-sm text-white/70 underline"
+            onClick={() => navigate("/")}
+          >
             ← Recorridas
           </button>
-          <span aria-hidden className={`h-3 w-3 shrink-0 rounded-full ${CLASE_SEMAFORO[semaforo]}`} />
-          <span className="min-w-0 flex-1 truncate text-[0.95rem] font-semibold">
-            {recorrida.equipo}
-            <span className="font-normal text-acero-500">
+          <span
+            aria-label={`Semáforo ${semaforo.toLowerCase()}`}
+            className={`h-2.5 w-2.5 shrink-0 rounded-full ${CLASE_SEMAFORO_LUZ[semaforo]}`}
+          />
+          <span className="min-w-0 flex-1 truncate text-[0.95rem] text-white">
+            <span style={{ fontStretch: "88%", fontWeight: 700 }}>{recorrida.equipo}</span>
+            <span className="text-white/60">
               {" "}
               {recorrida.pozoLocacion} · {fechaAR(recorrida.fechaRelevamiento)}
             </span>
           </span>
-          {recorrida.cerrada && <span className="badge bg-acero-900">Cerrada</span>}
-          <span className="cifras shrink-0 text-xs text-acero-500">
+          {recorrida.cerrada && <span className="badge bg-white/20">Cerrada</span>}
+          <span className="cifras shrink-0 text-xs text-white/60">
             {ctx.guardado ? "Guardado" : "Guardando…"}
           </span>
         </div>
 
-        <nav aria-label="Vistas de la recorrida" className="flex gap-1 overflow-x-auto px-3 pb-2 md:px-6">
+        <div className="mx-auto w-full max-w-[1600px] px-3 pt-2 md:px-6">
+          <Escalera zonas={zonas} />
+        </div>
+
+        <nav
+          aria-label="Vistas de la recorrida"
+          className="mx-auto flex w-full max-w-[1600px] gap-1 overflow-x-auto px-3 py-2 md:px-6"
+        >
           {VISTAS.map(({ v, texto }) => (
             <button
               key={v}
               type="button"
               disabled={v === "campo" && recorrida.cerrada}
               aria-current={vista === v ? "page" : undefined}
-              className={`min-h-[40px] whitespace-nowrap rounded px-3 text-sm font-semibold ${
-                vista === v ? "bg-acero-900 text-white" : "text-acero-700 disabled:opacity-40"
-              }`}
+              className="tab-cromo"
               onClick={() => setVista(v)}
             >
               {texto}
@@ -440,10 +464,8 @@ function FiltrosOficina({
       <button
         type="button"
         aria-pressed={filtros.soloPendientes}
-        className={`min-h-[48px] rounded border-2 px-4 font-semibold ${
-          filtros.soloPendientes
-            ? "border-acero-900 bg-acero-900 text-white"
-            : "border-acero-300 bg-papel"
+        className={`boton-secundario ${
+          filtros.soloPendientes ? "bg-acero-900 text-papel" : "border-acero-300"
         }`}
         onClick={() => onFiltros({ ...filtros, soloPendientes: !filtros.soloPendientes })}
       >

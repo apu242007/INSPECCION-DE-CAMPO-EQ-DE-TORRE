@@ -2,7 +2,7 @@
 //
 // BUMPEAR CACHE en cada cambio de este archivo o del precache. Sin bumpear, los usuarios ven
 // la versión vieja por días; y en una PWA instalada no pueden hacer Ctrl+Shift+R.
-const CACHE = "eq-torre-v1";
+const CACHE = "eq-torre-v2";
 
 // Rutas relativas: el scope es /INSPECCION-DE-CAMPO-EQ-DE-TORRE/, no la raíz.
 const PRECACHE = ["./", "./index.html", "./manifest.json", "./icono-192.png", "./icono-512.png"];
