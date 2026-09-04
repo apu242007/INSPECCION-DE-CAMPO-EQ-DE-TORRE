@@ -47,12 +47,18 @@ param(
     [string]$EquipoPrueba = "TEST-INSTALACION",
     [switch]$VerDefinicion,
     [string]$VerHistorial = "",
+    [switch]$VerRecorridas,
     [switch]$SaltearSharePoint,
     [switch]$SaltearFlujos,
     [switch]$SaltearSecrets
 )
 
 $ErrorActionPreference = "Stop"
+
+# Los modos de consulta no escriben NADA. -VerRecorridas se lee despues del bloque que aplica
+# flujos y secrets, asi que sin esto los volvia a aplicar antes de mostrar la primera fila.
+if ($VerRecorridas) { $SaltearFlujos = $true; $SaltearSecrets = $true }
+
 $RaizRepo = $PSScriptRoot
 $Resource = "https://$Hostname"
 $ApiSP    = "$Resource$SitePath/_api"
@@ -146,6 +152,18 @@ while ($partes.Length % 4) { $partes += "=" }
 $claims = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($partes)) | ConvertFrom-Json
 Ok "Usuario: $($claims.upn)"
 Ok "Tenant : $($claims.tid)"
+
+function Adjuntos($respuesta) {
+    <#
+      Invoke-SP devuelve un hashtable. `if ($r.value)` con un array VACIO evalua a $false, y
+      el `else` que devolvia $respuesta hacia que @(...).Count diera 1: la verificacion se
+      aprobaba sola con CERO adjuntos, e imprimia el nombre vacio. Un exito aparente con
+      datos vacios es el modo de falla mas caro de diagnosticar porque no parece una falla.
+    #>
+    if ($null -eq $respuesta) { return @() }
+    if ($respuesta -is [hashtable] -and $respuesta.ContainsKey('value')) { return @($respuesta['value']) }
+    return @($respuesta)
+}
 
 function Invoke-SP {
     param([string]$Method = "GET", [Parameter(Mandatory)][string]$Uri, $Body, [hashtable]$Extra)
@@ -564,6 +582,17 @@ if (-not $SaltearFlujos) {
             if ($ck) {
                 Write-Host "    Check_key: $($ck.expression | ConvertTo-Json -Compress -Depth 6)" -ForegroundColor Gray
             }
+
+            # El ORDEN es parte de la definicion y se rompe sin que nada falle: en EQT-01,
+            # Loop_attachments corriendo antes que Loop_items abre una ventana de ~50 s en la
+            # que EQT-02 contesta 404 porque la fila hija todavia no existe. Un flujo "verde"
+            # con el orden mal es exactamente el caso que costo una tarde. Por eso se imprime.
+            Write-Host "    acciones (runAfter):" -ForegroundColor Gray
+            foreach ($ap in $d.properties.definition.actions.PSObject.Properties) {
+                $ra = @($ap.Value.runAfter.PSObject.Properties.Name)
+                $de = if ($ra.Count -eq 0) { "(disparador)" } else { $ra -join ", " }
+                Write-Host ("      {0,-22} {1,-18} <- {2}" -f $ap.Name, $ap.Value.type, $de) -ForegroundColor DarkGray
+            }
         }
         exit 0
     }
@@ -803,17 +832,31 @@ if ($Probar) {
         }
         $claveProbar = (Get-Content -Raw -Encoding UTF8 (Join-Path $RaizRepo "clave.local.txt")).Trim()
 
+        # EQT-03 filtra por igualdad exacta de Equipo. Con un nombre inventado devuelve 0 y el
+        # 0 pasa por resultado normal: la prueba no prueba nada. Se toma el equipo de la ultima
+        # recorrida real para que el camino con datos se ejecute de verdad.
+        $equipoProbar = "TACK-6 / TKR-06"
+        try {
+            $encPP = [Uri]::EscapeDataString($LISTA_PADRE)
+            $ult = @((Invoke-SP -Uri "$ApiSP/web/lists/getbytitle('$encPP')/items?`$select=Equipo&`$orderby=Id desc&`$top=1").value)
+            if ($ult.Count -gt 0 -and $ult[0]['Equipo']) { $equipoProbar = $ult[0]['Equipo'] }
+        } catch { Warn "no pude leer el ultimo equipo cargado, uso el de por defecto" }
+
         # 1) Clave correcta -> 200 con JSON parseable.
         Write-Host ""
-        Write-Host "  EQT-03 con la clave correcta" -ForegroundColor White
+        Write-Host "  EQT-03 con la clave correcta (equipo: $equipoProbar)" -ForegroundColor White
         try {
-            $cuerpo = @{ equipo = "TACK-6 / TKR-06" } | ConvertTo-Json
+            $cuerpo = @{ equipo = $equipoProbar } | ConvertTo-Json
             $r = Invoke-RestMethod -Method POST -UseBasicParsing -Uri $urls["EQT-03"] `
                 -Headers @{ "Content-Type" = "application/json"; "x-tacker-key" = $claveProbar } `
                 -Body ([Text.Encoding]::UTF8.GetBytes($cuerpo))
             Ok "HTTP 200"
             Ok "recorridas: $(@($r.recorridas).Count)  itemsNoConformes: $(@($r.itemsNoConformes).Count)  catalogoExtra: $(@($r.catalogoExtra).Count)"
             if ($null -eq $r.recorridas) { Falla "La respuesta no trae 'recorridas': revisa el Select del flujo" }
+            elseif (@($r.recorridas).Count -eq 0) {
+                Warn "Cero recorridas para '$equipoProbar': el camino con datos NO se probo."
+                Warn "  Si el equipo existe, revisa que el texto coincida exacto (-VerRecorridas lo muestra entre corchetes)."
+            }
         } catch {
             Falla "$($_.Exception.Message)"
             if ($_.ErrorDetails.Message) { Write-Host "        $($_.ErrorDetails.Message.Substring(0,[Math]::Min(300,$_.ErrorDetails.Message.Length)))" -ForegroundColor DarkRed }
@@ -823,7 +866,7 @@ if ($Probar) {
         Write-Host ""
         Write-Host "  EQT-03 con una clave incorrecta (tiene que dar 401)" -ForegroundColor White
         try {
-            $cuerpo = @{ equipo = "TACK-6 / TKR-06" } | ConvertTo-Json
+            $cuerpo = @{ equipo = $equipoProbar } | ConvertTo-Json
             Invoke-RestMethod -Method POST -UseBasicParsing -Uri $urls["EQT-03"] `
                 -Headers @{ "Content-Type" = "application/json"; "x-tacker-key" = "clave-que-no-es" } `
                 -Body ([Text.Encoding]::UTF8.GetBytes($cuerpo)) | Out-Null
@@ -833,6 +876,47 @@ if ($Probar) {
             if ($code -eq 401) { Ok "HTTP 401 - el gate cierra" } else { Warn "Devolvio $code (se esperaba 401)" }
         }
     }
+}
+
+if ($VerRecorridas) {
+    <#
+      Que hay REALMENTE en las listas. Sirve para dos preguntas que aparecen siempre y que no
+      se contestan mirando el historial del flujo: si las fotos de un item quedaron adjuntas, y
+      con que texto exacto quedo guardado el Equipo -- EQT-03 filtra por igualdad, asi que un
+      "TACK-6/TKR-06" contra un "TACK-6 / TKR-06" devuelve cero y la deteccion de reiterativos
+      queda ciega sin que nada falle.
+    #>
+    Titulo "Recorridas cargadas en SharePoint"
+    $encP = [Uri]::EscapeDataString($LISTA_PADRE)
+    $encI = [Uri]::EscapeDataString($LISTA_ITEMS)
+
+    $padres = @((Invoke-SP -Uri "$ApiSP/web/lists/getbytitle('$encP')/items?`$select=Id,Title,Equipo,Pozo,Semaforo&`$orderby=Id desc&`$top=25").value)
+    if ($padres.Count -eq 0) { Warn "No hay ninguna recorrida cargada."; exit 0 }
+
+    foreach ($p in $padres) {
+        Write-Host ""
+        Write-Host ("  id={0}  folio={1}" -f $p['Id'], $p['Title']) -ForegroundColor White
+        Write-Host ("    Equipo=[{0}]  Pozo={1}  Semaforo={2}" -f $p['Equipo'], $p['Pozo'], $p['Semaforo']) -ForegroundColor Gray
+
+        $adjP = Adjuntos (Invoke-SP -Uri "$ApiSP/web/lists/getbytitle('$encP')/items($($p['Id']))/AttachmentFiles")
+        $nomP = @($adjP | Where-Object { $_['FileName'] } | ForEach-Object { $_['FileName'] })
+        Write-Host ("    adjuntos de la cabecera: {0}" -f $(if ($nomP.Count) { $nomP -join ', ' } else { 'ninguno' })) -ForegroundColor DarkGray
+
+        $q = "`$expand=Recorrida&`$select=Id,ItemId,Estado,FotosCount,Recorrida/Id&`$filter=Recorrida/Id eq $($p['Id'])&`$top=200"
+        $hijas = @((Invoke-SP -Uri "$ApiSP/web/lists/getbytitle('$encI')/items?$q").value)
+        $conFotos = @($hijas | Where-Object { [int]($_['FotosCount']) -gt 0 })
+        Write-Host ("    filas hijas: {0}   con FotosCount>0: {1}" -f $hijas.Count, $conFotos.Count) -ForegroundColor DarkGray
+
+        foreach ($h in $conFotos) {
+            $adjH = Adjuntos (Invoke-SP -Uri "$ApiSP/web/lists/getbytitle('$encI')/items($($h['Id']))/AttachmentFiles")
+            $nomH = @($adjH | Where-Object { $_['FileName'] } | ForEach-Object { $_['FileName'] })
+            # FotosCount lo escribe el flujo desde el payload: NO prueba que el archivo este.
+            # El unico que prueba es AttachmentFiles.
+            if ($nomH.Count -gt 0) { Ok ("  item {0}: {1}" -f $h['ItemId'], ($nomH -join ', ')) }
+            else { Falla ("  item {0}: FotosCount={1} pero SIN adjuntos" -f $h['ItemId'], $h['FotosCount']) }
+        }
+    }
+    exit 0
 }
 
 if ($Limpiar) {
@@ -940,9 +1024,9 @@ if ($ProbarCompleto) {
             else { Falla "Title de la fila padre: '$($padre.Title)', se esperaba '$folio'" }
             Ok "  Equipo=$($padre.Equipo)  Operadora=$($padre.Operadora)  Semaforo=$($padre.Semaforo)  NoOK=$($padre.ItemsNoOK)  Avance=$($padre.PctAvance)"
 
-            $adj = Invoke-SP -Uri "$ApiSP/web/lists/getbytitle('$encP')/items($spId)/AttachmentFiles"
-            $arch = if ($adj.value) { $adj.value } else { $adj }
-            if (@($arch).Count -gt 0) { foreach ($a in $arch) { Ok "adjunto: $($a.FileName)" } }
+            $arch = Adjuntos (Invoke-SP -Uri "$ApiSP/web/lists/getbytitle('$encP')/items($spId)/AttachmentFiles")
+            $conNombre = @($arch | Where-Object { $_['FileName'] })
+            if ($conNombre.Count -gt 0) { foreach ($a in $conNombre) { Ok "adjunto: $($a['FileName'])" } }
             else { Falla "La fila padre no tiene adjuntos: revisar Loop_attachments" }
 
             $q = "`$expand=Recorrida&`$select=ItemId,Estado,Adicional,Recorrida/Id&`$filter=Recorrida/Id eq $spId"
@@ -964,10 +1048,10 @@ if ($ProbarCompleto) {
             Start-Sleep -Seconds 5
             $q2 = "`$select=Id,FotosCount,ItemId&`$filter=Equipo eq 'TEST-INSTALACION' and ItemId eq 2&`$orderby=Id desc&`$top=1"
             $f2 = @((Invoke-SP -Uri "$ApiSP/web/lists/getbytitle('$encI')/items?$q2").value)[0]
-            $adj2 = Invoke-SP -Uri "$ApiSP/web/lists/getbytitle('$encI')/items($($f2.Id))/AttachmentFiles"
-            $arch2 = if ($adj2.value) { $adj2.value } else { $adj2 }
-            if (@($arch2).Count -gt 0) { Ok "foto adjunta: $($arch2[0].FileName)  FotosCount=$($f2.FotosCount)" }
-            else { Falla "El item no tiene la foto adjunta" }
+            $arch2 = Adjuntos (Invoke-SP -Uri "$ApiSP/web/lists/getbytitle('$encI')/items($($f2.Id))/AttachmentFiles")
+            $nombre2 = @($arch2 | Where-Object { $_['FileName'] } | ForEach-Object { $_['FileName'] })
+            if ($nombre2.Count -gt 0) { Ok "foto adjunta: $($nombre2 -join ', ')  FotosCount=$($f2.FotosCount)" }
+            else { Falla "El item NO tiene la foto adjunta (AttachmentFiles vino vacio) - revisar Add_attachment_item" }
         } catch {
             Falla "$($_.Exception.Message)"
             Warn "  Ver el detalle con: -SaltearSharePoint -VerHistorial '02 Adjuntar'"

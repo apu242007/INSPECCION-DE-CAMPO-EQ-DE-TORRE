@@ -91,6 +91,8 @@ Es idempotente: lo que ya existe se saltea. Modos útiles:
 | `.\Instalar-Todo.ps1 -Probar ...` | Prueba de humo: 200 con la clave, 401 sin ella |
 | `.\Instalar-Todo.ps1 -ProbarCompleto ...` | Crea una recorrida real, la verifica en SharePoint y la borra |
 | `.\Instalar-Todo.ps1 -VerHistorial '01 Crear'` | El historial de corridas con la acción exacta que falló |
+| `.\Instalar-Todo.ps1 -VerDefinicion` | La definición **viva** de cada flujo: parámetros, `Check_key` y el orden de las acciones |
+| `.\Instalar-Todo.ps1 -VerRecorridas` | Qué hay cargado en las listas, con los adjuntos reales de cada ítem (solo lectura) |
 | `.\Instalar-Todo.ps1 -ListarOperaciones` | Los `operationId` reales del conector, del swagger |
 | `.\Instalar-Todo.ps1 -BuscarLookups` | Cómo nombran las lookups los flujos que ya andan |
 | `.\Instalar-Todo.ps1 -Limpiar` | Borra las filas de prueba |
