@@ -16,3 +16,6 @@ sharepoint/*.log
 # Artefactos de herramientas locales, no del proyecto
 .claude-flow/
 .claude/
+
+# Carpetas desempaquetadas del generador de flujos (los .zip sí van al repo)
+power-automate/paquetes/EQT-0*/
