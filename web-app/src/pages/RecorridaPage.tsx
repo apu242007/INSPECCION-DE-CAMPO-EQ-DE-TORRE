@@ -29,14 +29,13 @@ const Dashboard = lazy(() =>
 const cargarPdf = () => import("../lib/pdfGenerator");
 const cargarExcel = () => import("../lib/excelExport");
 
-type Vista = "campo" | "lista" | "oficina" | "dashboard" | "envio";
+type Vista = "campo" | "lista" | "oficina" | "dashboard";
 
 const VISTAS: { v: Vista; texto: string }[] = [
   { v: "campo", texto: "Campo" },
   { v: "lista", texto: "Lista" },
   { v: "oficina", texto: "Oficina" },
   { v: "dashboard", texto: "Dashboard" },
-  { v: "envio", texto: "Envío y cierre" },
 ];
 
 export function RecorridaPage() {
@@ -311,16 +310,75 @@ export function RecorridaPage() {
       >
         <div className="min-w-0">
           {vista === "lista" && (
-            <ListaZonas
-              recorrida={recorrida}
-              catalogo={ctx.catalogoPorId}
-              filtros={filtros}
-              onFiltros={setFiltros}
-              onCambiarEstado={cambiarEstado}
-              onFotos={cambiarFotos}
-              onAbrirItem={abrirItem}
-              resaltados={resaltados}
-            />
+            <>
+              <ListaZonas
+                recorrida={recorrida}
+                catalogo={ctx.catalogoPorId}
+                filtros={filtros}
+                onFiltros={setFiltros}
+                onCambiarEstado={cambiarEstado}
+                onFotos={cambiarFotos}
+                onAbrirItem={abrirItem}
+                resaltados={resaltados}
+              />
+              <div className="mt-4 grid gap-4 xl:grid-cols-2 xl:items-start">
+                <div className="space-y-4">
+                  <SyncPanel
+                    recorrida={recorrida}
+                    enviando={enviando}
+                    onEnviar={() => void enviar()}
+                    onCambio={() => void ctx.recargar()}
+                  />
+
+                  <section className="panel p-4">
+                  <h2 className="mb-3 text-lg font-semibold">Exportar</h2>
+                  <div className="flex flex-wrap gap-2">
+                    <button className="boton-secundario" onClick={() => void exportarPDF()}>
+                      Descargar PDF
+                    </button>
+                    <button
+                      className="boton-secundario"
+                      onClick={async () => {
+                        const { generarExcel, nombreExcel } = await cargarExcel();
+                        descargar(generarExcel(recorrida, ctx.catalogoPorId), nombreExcel(recorrida));
+                      }}
+                    >
+                      Descargar Excel
+                    </button>
+                    <button
+                      className="boton-secundario"
+                      onClick={async () =>
+                        descargar(
+                          new Blob([await storage.exportarRecorridaJSON(recorrida)], {
+                            type: "application/json",
+                          }),
+                          `Recorrida-${recorrida.folio ?? recorrida.id}.json`,
+                        )
+                      }
+                    >
+                      Descargar JSON
+                    </button>
+                  </div>
+                  </section>
+                </div>
+
+                <CierreRecorrida
+                recorrida={recorrida}
+                catalogo={ctx.catalogoPorId}
+                onFirmar={(quien, dataUrl) =>
+                  // Forma funcional siempre: las dos firmas escriben sobre el mismo objeto y con
+                  // spread del estado capturado la segunda pisa a la primera.
+                  ctx.actualizar((r) => ({ ...r, firmas: { ...r.firmas, [quien]: dataUrl } }))
+                }
+                onCerrar={cerrar}
+                onReabrir={() => ctx.actualizar((r) => ({ ...r, cerrada: false }))}
+                onAbrirItem={(itemId) => {
+                  setResaltados(new Set([itemId]));
+                  abrirItem(itemId);
+                }}
+                />
+              </div>
+            </>
           )}
 
           {vista === "oficina" && (
@@ -351,66 +409,6 @@ export function RecorridaPage() {
               />
             </Suspense>
           )}
-
-          {vista === "envio" && (
-            <div className="grid gap-4 xl:grid-cols-2 xl:items-start">
-              <div className="space-y-4">
-                <SyncPanel
-                  recorrida={recorrida}
-                  enviando={enviando}
-                  onEnviar={() => void enviar()}
-                  onCambio={() => void ctx.recargar()}
-                />
-
-                <section className="panel p-4">
-                  <h2 className="mb-3 text-lg font-semibold">Exportar</h2>
-                  <div className="flex flex-wrap gap-2">
-                    <button className="boton-secundario" onClick={() => void exportarPDF()}>
-                      Descargar PDF
-                    </button>
-                    <button
-                      className="boton-secundario"
-                      onClick={async () => {
-                        const { generarExcel, nombreExcel } = await cargarExcel();
-                        descargar(generarExcel(recorrida, ctx.catalogoPorId), nombreExcel(recorrida));
-                      }}
-                    >
-                      Descargar Excel
-                    </button>
-                    <button
-                      className="boton-secundario"
-                      onClick={async () =>
-                        descargar(
-                          new Blob([await storage.exportarRecorridaJSON(recorrida)], {
-                            type: "application/json",
-                          }),
-                          `Recorrida-${recorrida.folio ?? recorrida.id}.json`,
-                        )
-                      }
-                    >
-                      Descargar JSON
-                    </button>
-                  </div>
-                </section>
-              </div>
-
-              <CierreRecorrida
-                recorrida={recorrida}
-                catalogo={ctx.catalogoPorId}
-                onFirmar={(quien, dataUrl) =>
-                  // Forma funcional siempre: las dos firmas escriben sobre el mismo objeto y con
-                  // spread del estado capturado la segunda pisa a la primera.
-                  ctx.actualizar((r) => ({ ...r, firmas: { ...r.firmas, [quien]: dataUrl } }))
-                }
-                onCerrar={cerrar}
-                onReabrir={() => ctx.actualizar((r) => ({ ...r, cerrada: false }))}
-                onAbrirItem={(itemId) => {
-                  setResaltados(new Set([itemId]));
-                  abrirItem(itemId);
-                }}
-              />
-            </div>
-          )}
         </div>
 
         {conDetalle && (
@@ -427,7 +425,7 @@ export function RecorridaPage() {
       </div>
 
       {/* La accion que cierra el trabajo, a la vista mientras se hace el trabajo. */}
-      {vista !== "envio" && !recorrida.cerrada && (
+      {vista !== "lista" && !recorrida.cerrada && (
         <BarraAccion
           recorrida={recorrida}
           enviando={enviando}

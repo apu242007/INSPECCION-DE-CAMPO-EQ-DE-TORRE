@@ -331,7 +331,7 @@ $COLS_CATALOGO = @(
 
 # ---------------------------------------------------------------- ejecucion
 
-function Procesar-Lista([string]$Titulo, $Columnas, [bool]$CrearSiFalta, [string]$Descripcion) {
+function Invoke-Lista([string]$Titulo, $Columnas, [bool]$CrearSiFalta, [string]$Descripcion) {
     Write-Host ""
     Write-Host "== $Titulo" -ForegroundColor White
 
@@ -360,9 +360,9 @@ function Procesar-Lista([string]$Titulo, $Columnas, [bool]$CrearSiFalta, [string
 Write-Host "Sitio: $Resource$SitePath" -ForegroundColor White
 if ($SoloVerificar) { Write-Host "MODO VERIFICACION: no se crea nada." -ForegroundColor Yellow }
 
-Procesar-Lista $LISTA_PADRE    $COLS_PADRE    $false "Recorridas de pre-auditoría de equipos de torre"
-Procesar-Lista $LISTA_ITEMS    $COLS_ITEMS    $true  "Ítems de cada recorrida de equipo de torre"
-Procesar-Lista $LISTA_CATALOGO $COLS_CATALOGO $true  "Ítems promovidos al catálogo general"
+Invoke-Lista $LISTA_PADRE    $COLS_PADRE    $false "Recorridas de pre-auditoría de equipos de torre"
+Invoke-Lista $LISTA_ITEMS    $COLS_ITEMS    $true  "Ítems de cada recorrida de equipo de torre"
+Invoke-Lista $LISTA_CATALOGO $COLS_CATALOGO $true  "Ítems promovidos al catálogo general"
 
 Write-Host ""
 Write-Host "=================================================================" -ForegroundColor Cyan
