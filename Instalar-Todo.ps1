@@ -44,6 +44,7 @@ param(
     [switch]$Probar,
     [switch]$ProbarCompleto,
     [switch]$Limpiar,
+    [string]$EquipoPrueba = "TEST-INSTALACION",
     [switch]$VerDefinicion,
     [string]$VerHistorial = "",
     [switch]$SaltearSharePoint,
@@ -843,7 +844,7 @@ if ($Limpiar) {
         Write-Host ""
         Write-Host "  $($par.n)" -ForegroundColor White
         # Mirar el crudo antes de asumir la forma: ya perdi tres vueltas adivinandola.
-        $r = Invoke-SP -Uri "$ApiSP/web/lists/getbytitle('$($par.e)')/items?`$filter=Equipo eq 'TEST-INSTALACION'"
+        $r = Invoke-SP -Uri "$ApiSP/web/lists/getbytitle('$($par.e)')/items?`$filter=Equipo eq '$EquipoPrueba'"
         $filas = @($r.value)
         if ($filas.Count -eq 0) { Skip "sin filas de prueba"; continue }
 

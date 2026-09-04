@@ -1,5 +1,6 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { BarraAccion } from "../components/BarraAccion";
 import { CierreRecorrida } from "../components/CierreRecorrida";
 import { FILTROS_VACIOS, ListaZonas, type Filtros } from "../components/ListaZonas";
 import { SyncPanel } from "../components/SyncPanel";
@@ -47,6 +48,7 @@ export function RecorridaPage() {
   const [itemAbierto, setItemAbierto] = useState<number | null>(null);
   const [agregando, setAgregando] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
+  const [generandoPdf, setGenerandoPdf] = useState(false);
   const [mensaje, setMensaje] = useState<string | null>(null);
   const [responsables, setResponsables] = useState<string[]>([]);
   const [resaltados, setResaltados] = useState<Set<number>>(new Set());
@@ -135,7 +137,9 @@ export function RecorridaPage() {
       } else if (estado.itemsEnError > 0) {
         setMensaje(`${estado.itemsEnError} ítem(s) con error. Se pueden reintentar.`);
       } else {
-        setMensaje("Enviado a SharePoint.");
+        setMensaje(
+          "Enviado. La recorrida quedó en SharePoint con el PDF adjunto y el informe salió por correo a QHSE.",
+        );
       }
     } catch (e) {
       setMensaje(`No se pudo enviar: ${e instanceof Error ? e.message : String(e)}`);
@@ -168,11 +172,16 @@ export function RecorridaPage() {
 
   const exportarPDF = useCallback(async () => {
     if (!recorrida) return;
-    setMensaje("Generando el PDF…");
-    const { generarPDFConTope, nombrePDF } = await cargarPdf();
-    const pdf = await generarPDFConTope({ recorrida, catalogo: ctx.catalogoPorId }, MAX_PDF_BYTES);
-    descargar(pdf, nombrePDF(recorrida));
-    setMensaje(null);
+    setGenerandoPdf(true);
+    try {
+      const { generarPDFConTope, nombrePDF } = await cargarPdf();
+      const pdf = await generarPDFConTope({ recorrida, catalogo: ctx.catalogoPorId }, MAX_PDF_BYTES);
+      descargar(pdf, nombrePDF(recorrida));
+    } catch (e) {
+      setMensaje(`No se pudo generar el PDF: ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setGenerandoPdf(false);
+    }
   }, [recorrida, ctx.catalogoPorId]);
 
   const siguienteId = useMemo(
@@ -272,7 +281,7 @@ export function RecorridaPage() {
         hacia abajo hace perder la fila en la que estabas y obliga a volver a buscarla.
       */}
       <div
-        className={`mx-auto w-full max-w-[1600px] gap-4 p-3 md:p-6 ${
+        className={`mx-auto w-full max-w-[1600px] gap-4 p-3 pb-44 md:p-6 md:pb-40 ${
           conDetalle ? "lg:grid lg:grid-cols-[minmax(0,1fr)_28rem] lg:items-start" : ""
         }`}
       >
@@ -392,6 +401,21 @@ export function RecorridaPage() {
           </aside>
         )}
       </div>
+
+      {/* La accion que cierra el trabajo, a la vista mientras se hace el trabajo. */}
+      {vista !== "envio" && !recorrida.cerrada && (
+        <BarraAccion
+          recorrida={recorrida}
+          enviando={enviando}
+          generandoPdf={generandoPdf}
+          onEnviar={() => void enviar()}
+          onPdf={() => void exportarPDF()}
+          onIrAItem={(itemId) => {
+            setResaltados(new Set([itemId]));
+            abrirItem(itemId);
+          }}
+        />
+      )}
     </div>
   );
 }
