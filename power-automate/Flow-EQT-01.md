@@ -32,9 +32,9 @@ Cuando se recibe una solicitud HTTP
 ├─ Init_varFolio
 ├─ CreateHeaderItem             (Crear elemento en <LISTA_PADRE>)
 ├─ Respuesta                    ← 200 ACÁ, antes de los loops
-├─ Loop_attachments             (concurrencia 1)  → Add_attachment
 ├─ Loop_items                   (concurrencia 20) → Create_item_EQT
 ├─ Loop_adicionales             (concurrencia 20) → Create_item_adicional
+├─ Loop_attachments             (concurrencia 1)  → Add_attachment
 └─ Send_email_V2                (fuera de todo loop, run-after = solo correcto)
 ```
 
@@ -165,9 +165,24 @@ dinámico: los chips guardan referencias al esquema y se rompen cuando el dispar
 > Si la `url` compuesta no resuelve, es preferible **no devolverla** que devolver una rota: la
 > SPA solo muestra el botón «Ver en SharePoint» si viene el campo.
 
+### El orden de los loops importa, y por una razón que no se ve
+
+Devolver el 200 antes de los loops tiene una contra: ese 200 significa **«existe la cabecera»**
+y nada más. La SPA lo toma como señal para empezar a mandar las fotos por EQT-02, y EQT-02
+busca la **fila hija** del ítem. Si todavía no está, contesta 404.
+
+Con `Loop_attachments` primero, la ventana no la marcaba la creación de las filas —van a 20 en
+paralelo, es rápido— sino la subida del PDF: varios MB, en serie, con concurrencia obligada 1.
+Medido en producción el 4/9/2026: cabecera creada 15:03:45, primer EQT-02 con **404** a las
+15:03:48, la **misma** llamada OK a las 15:04:35. Cincuenta segundos de ventana, casi todos
+esperando un adjunto que no espera nadie.
+
+Por eso los ítems van primero y los adjuntos al final. **Al mover una acción de este flujo,
+revisá que `Loop_items` siga corriendo antes que `Loop_attachments`.**
+
 ---
 
-## 6 · `Loop_attachments` — Aplicar a cada uno
+## 7 · `Loop_attachments` — Aplicar a cada uno (DESPUÉS de los ítems)
 
 | Campo | Valor |
 |---|---|
@@ -211,7 +226,7 @@ cargando cada campo por la pestaña `fx`, sin tocar el selector de archivos.
 
 ---
 
-## 7 · `Loop_items` — Aplicar a cada uno
+## 6 · `Loop_items` — Aplicar a cada uno (PRIMERO)
 
 | Campo | Valor |
 |---|---|

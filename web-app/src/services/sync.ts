@@ -5,6 +5,7 @@ import type { Foto, ItemCatalogo, Recorrida, RegistroItem } from "../types";
 import * as storage from "../storage";
 import type { TareaCola } from "../storage";
 import {
+  ErrorApi,
   type Adjunto,
   type ItemEQT01,
   type PayloadEQT01,
@@ -43,9 +44,33 @@ export const MAX_PDF_BYTES = 4 * 1024 * 1024;
 let reintentosMax = 3;
 let backoffMs = [1_000, 4_000, 10_000];
 
-export function configurarSync(opts: { reintentosMax?: number; backoffMs?: number[] }): void {
+/**
+ * Escala de espera aparte para el 404 de EQT-02.
+ *
+ * Ese 404 no dice "el payload está mal": dice "la fila hija todavía no existe". EQT-01
+ * devuelve 200 apenas crea la cabecera —su acción `Respuesta` va ANTES de los bucles, para no
+ * morir en el gateway de ~110 s— y la SPA arranca la cola con ese 200. La primera llamada de
+ * un ítem puede llegar segundos antes que su fila.
+ *
+ * Medido en producción el 4/9/2026: cabecera creada 15:03:45, primer EQT-02 con 404 a las
+ * 15:03:48, la MISMA llamada OK a las 15:04:35. Por eso los tramos son largos y suman ~65 s.
+ *
+ * El reintento con espera ES el sondeo: desde el cliente no hay forma de preguntarle a
+ * SharePoint si la fila ya está. Y lo paga solo el PRIMER ítem de la tanda — cuando aparece
+ * su fila, ya están todas, así que el resto de la cola pasa de largo.
+ */
+let backoffFilaPendienteMs = [5_000, 10_000, 20_000, 30_000];
+
+export function configurarSync(opts: {
+  reintentosMax?: number;
+  backoffMs?: number[];
+  backoffFilaPendienteMs?: number[];
+}): void {
   if (opts.reintentosMax !== undefined) reintentosMax = opts.reintentosMax;
   if (opts.backoffMs !== undefined) backoffMs = opts.backoffMs;
+  if (opts.backoffFilaPendienteMs !== undefined) {
+    backoffFilaPendienteMs = opts.backoffFilaPendienteMs;
+  }
 }
 
 export interface EstadoSincronizacion {
@@ -353,19 +378,48 @@ async function subirFotosConReintento(
   const bytes = payload.fotos.reduce((a, f) => a + bytesDeBase64(f.contentBase64), 0);
 
   let ultimoError = "";
-  for (let intento = tarea.intentos; intento < reintentosMax; intento += 1) {
+  let ultimoStatus = 0;
+  // Dos contadores, porque son dos fallas distintas: la red que se cortó, y la fila que
+  // todavía no está. Sondear por lo segundo no puede gastar los reintentos de lo primero.
+  let intentos = tarea.intentos;
+  let esperasFila = 0;
+
+  for (;;) {
     try {
       const r = await postFlujo("EQT02", payload);
       if (esRespuestaDemo(r)) return { ok: true, bytes: 0 };
       return { ok: true, bytes };
     } catch (e) {
       ultimoError = e instanceof Error ? e.message : String(e);
-      const reintentable = !(e instanceof Object && "reintentable" in e) || Boolean((e as { reintentable?: boolean }).reintentable);
-      await registrarIntento(tarea.id, intento + 1, ultimoError);
-      if (!reintentable) break;
-      if (intento + 1 < reintentosMax) await esperar(backoffMs[intento] ?? 10_000);
+      const status = e instanceof ErrorApi ? e.status : 0;
+      ultimoStatus = status;
+      await registrarIntento(tarea.id, intentos + esperasFila + 1, ultimoError);
+
+      // 404 = la fila hija todavía no existe. Se sondea con su propia escala, acotada.
+      if (status === 404 && esperasFila < backoffFilaPendienteMs.length) {
+        await esperar(backoffFilaPendienteMs[esperasFila]);
+        esperasFila += 1;
+        continue;
+      }
+
+      const reintentable = e instanceof ErrorApi ? e.reintentable : true;
+      intentos += 1;
+      if (!reintentable || intentos >= reintentosMax) break;
+      await esperar(backoffMs[intentos - 1] ?? 10_000);
     }
   }
+
+  // "EQT02 respondió 404" no le dice nada a nadie parado abajo del mástil. Lo que pasó tiene
+  // nombre y tiene salida: la fila del ítem todavía no estaba, y se reintenta.
+  if (ultimoStatus === 404) {
+    return {
+      ok: false,
+      error:
+        "SharePoint todavía no había terminado de crear la fila de este ítem. " +
+        "Las fotos siguen guardadas: tocá «Reintentar» en un minuto.",
+    };
+  }
+
   return { ok: false, error: ultimoError };
 }
 

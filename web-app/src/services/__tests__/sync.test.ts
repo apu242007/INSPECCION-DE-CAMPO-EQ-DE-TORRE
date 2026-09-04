@@ -50,7 +50,11 @@ beforeEach(async () => {
   await storage.borrarTodo();
   configurarApi({ urls: URLS, key: "test-key" });
   // Sin backoff: lo que se prueba es la cantidad de reintentos, no el reloj.
-  configurarSync({ reintentosMax: 3, backoffMs: [0, 0, 0] });
+  configurarSync({
+    reintentosMax: 3,
+    backoffMs: [0, 0, 0],
+    backoffFilaPendienteMs: [0, 0, 0, 0],
+  });
 });
 
 afterEach(() => {
@@ -162,6 +166,55 @@ describe("EQT-02 — cola de fotos", () => {
     await enviarRecorrida(r, PDF);
 
     expect(intentosItem1).toBe(3);
+  });
+
+  /*
+   * EQT-01 devuelve 200 apenas crea la cabecera: su acción `Respuesta` va ANTES de los bucles
+   * que crean las filas hijas, justamente para no morir en el gateway de ~110 s. La SPA
+   * arranca la cola de EQT-02 al recibir ese 200, así que la primera llamada de un ítem puede
+   * llegar antes que su fila. Ahí EQT-02 no encuentra nada y su guarda responde 404.
+   *
+   * Medido en producción el 4/9/2026: cabecera creada 15:03:45, primer EQT-02 con 404 a las
+   * 15:03:48, la MISMA llamada OK a las 15:04:35. No es un payload malo — es "todavía no".
+   */
+  it("un 404 de EQT-02 es «la fila todavía no existe»: espera y vuelve a intentar", async () => {
+    let llamadas = 0;
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url === URLS.EQT01) return respuesta(200, { recorridaId: 8, folio: "F" });
+      llamadas += 1;
+      return llamadas <= 2
+        ? respuesta(404, '{"error":"item no encontrado"}')
+        : respuesta(200, { ok: true });
+    });
+    vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch);
+
+    const r = marcar(recorridaDePrueba(), [{ itemId: 1, estado: "NO_OK" }]);
+    await storage.guardarRecorrida(r);
+    const estado = await enviarRecorrida(r, PDF);
+
+    expect(llamadas).toBe(3);
+    expect(estado.itemsSubidos).toBe(1);
+    expect(estado.itemsEnError).toBe(0);
+    expect(await storage.leerCola()).toHaveLength(0);
+  });
+
+  it("un 404 que no se resuelve nunca corta y deja la tarea en la cola", async () => {
+    let llamadas = 0;
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url === URLS.EQT01) return respuesta(200, { recorridaId: 8, folio: "F" });
+      llamadas += 1;
+      return respuesta(404, '{"error":"item no encontrado"}');
+    });
+    vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch);
+
+    const r = marcar(recorridaDePrueba(), [{ itemId: 1, estado: "NO_OK" }]);
+    await storage.guardarRecorrida(r);
+    const estado = await enviarRecorrida(r, PDF);
+
+    // 4 esperas configuradas = 4 reintentos, y después se rinde. Acotado, no infinito.
+    expect(llamadas).toBe(5);
+    expect(estado.itemsEnError).toBe(1);
+    expect((await storage.leerCola()).map((t) => t.itemId)).toEqual([1]);
   });
 
   it("no reintenta un 400: el payload no va a mejorar solo", async () => {

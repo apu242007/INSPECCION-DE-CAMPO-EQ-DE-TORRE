@@ -276,25 +276,24 @@ function eqt01() {
         { CreateHeaderItem: ["Succeeded"] },
       ),
 
-      Loop_attachments: {
-        runAfter: { Respuesta: ["Succeeded"] },
-        type: "Foreach",
-        foreach: "@triggerBody()?['attachments']",
-        // Concurrencia 1 obligatoria: todas las iteraciones escriben sobre la MISMA fila y
-        // SharePoint usa concurrencia optimista por ETag -> Save Conflict intermitente.
-        runtimeConfiguration: { concurrency: { repetitions: 1 } },
-        actions: {
-          Add_attachment: adjuntar(
-            LISTA_PADRE,
-            "@outputs('CreateHeaderItem')?['body/ID']",
-            "@items('Loop_attachments')?['name']",
-            "@base64ToBinary(items('Loop_attachments')?['contentBase64'])",
-          ),
-        },
-      },
-
+      /*
+       * ORDEN DE LOS BUCLES: LAS FILAS HIJAS PRIMERO, EL PDF DESPUÉS.
+       *
+       * La `Respuesta` va antes de todos los bucles para devolver 200 en ~3 s y no morir en el
+       * gateway de ~110 s. La contra es que ese 200 llega cuando existe la cabecera y NADA más:
+       * la SPA lo toma como señal para empezar a mandar las fotos por EQT-02, y EQT-02 busca la
+       * fila hija del ítem. Si todavía no está, contesta 404.
+       *
+       * Con `Loop_attachments` primero, esa ventana la marcaba la subida del PDF —varios MB, en
+       * serie, concurrencia 1— y no la creación de las filas, que va a 20 en paralelo. Medido en
+       * producción el 4/9/2026: cabecera 15:03:45, EQT-02 con 404 a las 15:03:48, la misma
+       * llamada OK a las 15:04:35. Cincuenta segundos de ventana, casi todos esperando al PDF.
+       *
+       * Poniendo los ítems primero la ventana pasa a ser la que de verdad hace falta. El PDF no
+       * lo espera nadie: no hay ninguna llamada posterior que dependa del adjunto.
+       */
       Loop_items: {
-        runAfter: { Loop_attachments: ["Succeeded"] },
+        runAfter: { Respuesta: ["Succeeded"] },
         type: "Foreach",
         foreach: "@triggerBody()?['items']",
         // Filas distintas: el paralelo es seguro.
@@ -310,9 +309,26 @@ function eqt01() {
         actions: items("Loop_adicionales", true),
       },
 
+      Loop_attachments: {
+        runAfter: { Loop_adicionales: ["Succeeded"] },
+        type: "Foreach",
+        foreach: "@triggerBody()?['attachments']",
+        // Concurrencia 1 obligatoria: todas las iteraciones escriben sobre la MISMA fila y
+        // SharePoint usa concurrencia optimista por ETag -> Save Conflict intermitente.
+        runtimeConfiguration: { concurrency: { repetitions: 1 } },
+        actions: {
+          Add_attachment: adjuntar(
+            LISTA_PADRE,
+            "@outputs('CreateHeaderItem')?['body/ID']",
+            "@items('Loop_attachments')?['name']",
+            "@base64ToBinary(items('Loop_attachments')?['contentBase64'])",
+          ),
+        },
+      },
+
       Send_email_V2: {
         // Solo si TODO salió bien: si SharePoint falla, un mail de éxito es peor que nada.
-        runAfter: { Loop_adicionales: ["Succeeded"] },
+        runAfter: { Loop_attachments: ["Succeeded"] },
         type: "OpenApiConnection",
         inputs: {
           host: {

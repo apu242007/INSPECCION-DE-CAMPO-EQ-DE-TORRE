@@ -84,6 +84,13 @@ concat('Recorrida/Id eq ', string(triggerBody()?['recorridaId']), ' and ItemId e
 
 **Si no:** `Respuesta` 404 con `{"error":"item no encontrado"}` → `Terminar` (`Failed`).
 
+> **Ese 404 casi nunca significa «no existe»: significa «todavía no».** EQT-01 devuelve 200
+> apenas crea la cabecera, así que la primera llamada de un ítem puede llegar antes que su
+> fila. Por eso EQT-01 crea los ítems ANTES de subir el PDF (ver Flow-EQT-01.md) y la SPA
+> trata este 404 como transitorio: lo reintenta con espera larga en vez de darlo por perdido
+> (`backoffFilaPendienteMs` en `services/sync.ts`). Si el 404 persiste después de ~65 s, ahí
+> sí es un problema real: revisá que `recorridaId` sea el ID numérico de SharePoint.
+
 > Toda rama tiene que terminar en una acción `Respuesta`. Un camino sin ella devuelve **202
 > Accepted sin cuerpo**, que el cliente lee como éxito con datos vacíos. Es el modo de falla más
 > caro de diagnosticar porque no parece una falla.
