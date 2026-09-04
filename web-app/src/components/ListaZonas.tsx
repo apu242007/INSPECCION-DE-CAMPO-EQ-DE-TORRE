@@ -2,21 +2,29 @@ import { useMemo, useState } from "react";
 import { HALLAZGO_DERIVADO, ZONAS } from "../data/catalogo";
 import { badgeOrigen } from "../lib/reiteracion";
 import { criticidadEfectiva, estaEscalado } from "../lib/metrics";
-import type { Criticidad, Estado, ItemCatalogo, Origen, Recorrida, RegistroItem } from "../types";
-import {
-  CLASE_CRITICIDAD,
-  CLASE_ESTADO,
-  ETIQUETA_CRITICIDAD,
-  ETIQUETA_ESTADO,
-  ETIQUETA_ESTADO_CORTA,
-} from "../ui";
+import type {
+  Criticidad,
+  Estado,
+  Foto,
+  ItemCatalogo,
+  Origen,
+  Recorrida,
+  RegistroItem,
+} from "../types";
+import { CLASE_CRITICIDAD, ETIQUETA_CRITICIDAD, ETIQUETA_ESTADO } from "../ui";
+import { CapturaFoto } from "./campo/CapturaFoto";
+import { SelectorEstado } from "./SelectorEstado";
 
 /**
- * Vista "Lista": las 17 zonas como acordeones.
+ * Vista "Lista": las 17 zonas, y dentro de cada una los ítems con sus cuatro botones de estado
+ * A LA VISTA.
  *
- * Van todas dentro de UN panel con separadores finos, no como 17 tarjetas sueltas: una tarjeta
- * por zona convierte un índice de 17 líneas en un scroll de tres pantallas, y el usuario deja
- * de poder abarcar la recorrida de un vistazo, que es justo para lo que sirve esta vista.
+ * La regla que manda acá es la velocidad: marcar un ítem es UN toque. Nada de abrir el ítem
+ * para poder marcarlo. Las zonas arrancan desplegadas por lo mismo — se baja scrolleando y
+ * marcando, que es como se hace un check de 94 ítems.
+ *
+ * El detalle de oficina (responsable, plazo, acción correctiva) vive detrás de un enlace
+ * chico: es trabajo de escritorio y no tiene por qué estorbar al que está marcando.
  */
 
 export interface Filtros {
@@ -78,8 +86,12 @@ interface Props {
   catalogo: ReadonlyMap<number, ItemCatalogo>;
   filtros: Filtros;
   onFiltros: (f: Filtros) => void;
+  /** Marcar el estado desde la fila. Es la acción principal de esta pantalla. */
+  onCambiarEstado: (itemId: number, estado: Estado) => void;
+  /** Fotos desde la fila: un NO OK no se puede dejar sin evidencia. */
+  onFotos: (itemId: number, fotos: Foto[]) => void;
+  /** Abre el detalle de oficina (responsable, plazo, acción correctiva). */
   onAbrirItem: (itemId: number) => void;
-  /** Ítems a resaltar (por ejemplo, los que bloquean el cierre por falta de foto). */
   resaltados?: ReadonlySet<number>;
 }
 
@@ -88,10 +100,12 @@ export function ListaZonas({
   catalogo,
   filtros,
   onFiltros,
+  onCambiarEstado,
+  onFotos,
   onAbrirItem,
   resaltados,
 }: Props) {
-  const [abiertas, setAbiertas] = useState<Set<string>>(new Set());
+  const [cerradas, setCerradas] = useState<Set<string>>(new Set());
   const [ayudaDe, setAyudaDe] = useState<number | null>(null);
 
   const visibles = useMemo(
@@ -115,7 +129,6 @@ export function ListaZonas({
       if (lista) lista.push(r);
       else mapa.set(zona, [r]);
     }
-    // Los adicionales van al final de su zona.
     for (const lista of mapa.values()) {
       lista.sort((a, b) => {
         const adA = idsAdicionales.has(a.itemId) ? 1 : 0;
@@ -132,7 +145,7 @@ export function ListaZonas({
   ].filter((z) => porZona.has(z));
 
   function alternar(zona: string) {
-    setAbiertas((prev) => {
+    setCerradas((prev) => {
       const s = new Set(prev);
       if (s.has(zona)) s.delete(zona);
       else s.add(zona);
@@ -140,42 +153,49 @@ export function ListaZonas({
     });
   }
 
+  const bloqueado = recorrida.cerrada;
+  const pendientes = recorrida.registros.filter((r) => r.estado === "SIN_REVISAR").length;
+
   return (
     <div className="space-y-3">
-      <BarraFiltros filtros={filtros} onFiltros={onFiltros} visibles={visibles.length} />
+      <BarraFiltros
+        filtros={filtros}
+        onFiltros={onFiltros}
+        visibles={visibles.length}
+        pendientes={pendientes}
+        onCerrarTodas={() => setCerradas(new Set(zonasOrdenadas))}
+        onAbrirTodas={() => setCerradas(new Set())}
+      />
 
       {zonasOrdenadas.length === 0 ? (
         <p className="panel px-6 py-10 text-center text-acero-700">
           Ningún ítem coincide con los filtros.
         </p>
       ) : (
-        <div className="panel overflow-hidden">
+        <div className="space-y-2">
           {zonasOrdenadas.map((zona) => {
             const registros = porZona.get(zona) ?? [];
             const revisados = registros.filter((r) => r.estado !== "SIN_REVISAR").length;
             const noOk = registros.filter(
               (r) => r.estado === "NO_OK" || r.estado === "EN_PROC",
             ).length;
-            const reiterativos = registros.filter((r) => r.origen === "REITERATIVO").length;
-            const abierta = abiertas.has(zona);
+            const abierta = !cerradas.has(zona);
             const completa = revisados === registros.length;
 
             return (
-              <section key={zona} className="fila">
-                <h3>
+              <section key={zona} className="panel overflow-hidden">
+                <h3 className="sticky top-0 z-[1] bg-acero-50">
                   <button
                     type="button"
                     aria-expanded={abierta}
-                    className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left md:px-4"
+                    className="flex w-full items-center gap-2.5 border-b border-acero-200 px-3 py-2 text-left"
                     onClick={() => alternar(zona)}
                   >
                     <span aria-hidden className="w-3 shrink-0 text-acero-500">
                       {abierta ? "▾" : "▸"}
                     </span>
                     <span className="min-w-0 flex-1 truncate font-semibold">{zona}</span>
-
                     {noOk > 0 && <span className="badge bg-critico">{noOk} NO OK</span>}
-                    {reiterativos > 0 && <span className="badge bg-reiterado">×{reiterativos}</span>}
                     <span
                       className={`cifras w-14 shrink-0 text-right text-sm ${
                         completa ? "text-conforme-ink" : "text-acero-500"
@@ -187,109 +207,119 @@ export function ListaZonas({
                 </h3>
 
                 {abierta && (
-                  <ul className="border-t border-acero-200 bg-acero-50">
+                  <ul>
                     {registros.map((r) => {
                       const info =
                         catalogo.get(r.itemId) ??
                         recorrida.itemsAdicionales.find((a) => a.id === r.itemId);
                       const criticidad = criticidadEfectiva(r, catalogo) as Criticidad;
-                      const escalado = estaEscalado(r, catalogo);
-                      const sinRevisar = r.estado === "SIN_REVISAR";
+                      const noConforme = r.estado === "NO_OK" || r.estado === "EN_PROC";
+                      const faltaFoto = noConforme && r.evidencia.length === 0;
 
                       return (
                         <li
                           key={r.itemId}
-                          className={`fila ${resaltados?.has(r.itemId) ? "bg-critico-suave" : ""}`}
+                          className={`fila px-3 py-2 ${
+                            faltaFoto || resaltados?.has(r.itemId)
+                              ? "bg-critico-suave"
+                              : r.estado === "OK"
+                                ? "bg-conforme-suave"
+                                : ""
+                          }`}
                         >
-                          <button
-                            type="button"
-                            className="w-full px-3 py-2.5 text-left md:px-4"
-                            onClick={() => onAbrirItem(r.itemId)}
-                          >
-                            <div className="flex flex-wrap items-center gap-1.5">
-                              <span className="cifras text-sm font-semibold text-acero-500">
-                                #{r.itemId}
-                              </span>
-                              <span className={`badge ${CLASE_CRITICIDAD[criticidad]}`}>
-                                {ETIQUETA_CRITICIDAD[criticidad]}
-                              </span>
-                              {/* «Sin revisar» es el estado por defecto: no merece un badge sólido
-                                  compitiendo con los estados que sí dicen algo. */}
-                              {sinRevisar ? (
-                                <span className="text-sm text-acero-500">
-                                  {ETIQUETA_ESTADO_CORTA.SIN_REVISAR}
+                          <div className="flex items-start gap-2">
+                            <span className="cifras mt-0.5 w-8 shrink-0 text-sm font-semibold text-acero-500">
+                              #{r.itemId}
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-[0.95rem] leading-snug">{info?.item}</p>
+                              <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                                <span className={`badge ${CLASE_CRITICIDAD[criticidad]}`}>
+                                  {ETIQUETA_CRITICIDAD[criticidad]}
                                 </span>
-                              ) : (
-                                <span className={`badge ${CLASE_ESTADO[r.estado]}`}>
-                                  {ETIQUETA_ESTADO[r.estado]}
-                                </span>
-                              )}
-                              {idsAdicionales.has(r.itemId) && (
-                                <span className="badge bg-acero-900">Adicional</span>
-                              )}
-                              {r.origen && (
-                                <span
-                                  className={`badge ${
-                                    r.origen === "NUEVO" ? "bg-nuevo" : "bg-reiterado"
-                                  }`}
+                                {idsAdicionales.has(r.itemId) && (
+                                  <span className="badge bg-acero-900">Adicional</span>
+                                )}
+                                {r.origen && (
+                                  <span
+                                    className={`badge ${
+                                      r.origen === "NUEVO" ? "bg-nuevo" : "bg-reiterado"
+                                    }`}
+                                  >
+                                    {badgeOrigen(r.origen, r.reiteracion)}
+                                  </span>
+                                )}
+                                {estaEscalado(r, catalogo) && (
+                                  <span className="badge bg-critico">Escalado</span>
+                                )}
+                                {info?.hallazgoTipico && (
+                                  <button
+                                    type="button"
+                                    aria-label={`Hallazgo típico del ítem ${r.itemId}`}
+                                    aria-expanded={ayudaDe === r.itemId}
+                                    className="flex h-6 w-6 items-center justify-center rounded-full border border-acero-500 text-xs font-bold text-acero-700"
+                                    onClick={() =>
+                                      setAyudaDe(ayudaDe === r.itemId ? null : r.itemId)
+                                    }
+                                  >
+                                    ?
+                                  </button>
+                                )}
+                                <button
+                                  type="button"
+                                  className="text-xs font-semibold text-acero-700 underline"
+                                  onClick={() => onAbrirItem(r.itemId)}
                                 >
-                                  {badgeOrigen(r.origen, r.reiteracion)}
-                                  {r.reiteracion?.detectadaAutomaticamente ? " ◆" : ""}
-                                </span>
-                              )}
-                              {escalado && <span className="badge bg-critico">Escalado</span>}
-                              {r.evidencia.length > 0 && (
-                                <span className="cifras text-sm text-acero-500">
-                                  {r.evidencia.length} foto{r.evidencia.length === 1 ? "" : "s"}
-                                </span>
-                              )}
-                              {r.sync && (
-                                <span
-                                  title={r.syncError ?? r.sync}
-                                  className={`text-sm ${
-                                    r.sync === "SINCRONIZADO"
-                                      ? "text-conforme-ink"
-                                      : r.sync === "ERROR"
-                                        ? "text-critico-ink"
-                                        : "text-acero-500"
-                                  }`}
-                                >
-                                  {r.sync === "SINCRONIZADO"
-                                    ? "enviado"
-                                    : r.sync === "ERROR"
-                                      ? "error de envío"
-                                      : "por enviar"}
-                                </span>
+                                  Detalle
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+
+                          {ayudaDe === r.itemId && info && (
+                            <div className="ml-10 mt-2 border-l-4 border-acero-900 bg-acero-50 p-2.5 text-sm">
+                              <p>{info.hallazgoTipico}</p>
+                              {HALLAZGO_DERIVADO.has(info.id) && (
+                                <p className="mt-1.5 text-acero-500">
+                                  Redacción derivada de la condición, todavía no tomada del
+                                  informe original.
+                                </p>
                               )}
                             </div>
+                          )}
 
-                            <p className="mt-0.5 text-[0.95rem] leading-snug">{info?.item}</p>
-                          </button>
+                          {/* La acción principal: marcar. Siempre visible, un toque. */}
+                          <div className="ml-10 mt-1.5">
+                            <SelectorEstado
+                              actual={r.estado}
+                              deshabilitado={bloqueado}
+                              etiqueta={`Estado del ítem ${r.itemId}`}
+                              onElegir={(estado) => onCambiarEstado(r.itemId, estado)}
+                            />
+                          </div>
 
-                          {info?.hallazgoTipico && (
-                            <div className="px-3 pb-2 md:px-4">
-                              <button
-                                type="button"
-                                className="text-sm font-semibold underline"
-                                aria-expanded={ayudaDe === r.itemId}
-                                onClick={() => setAyudaDe(ayudaDe === r.itemId ? null : r.itemId)}
-                              >
-                                {ayudaDe === r.itemId
-                                  ? "Ocultar la ayuda"
-                                  : "Cómo se redacta si falla"}
-                              </button>
-                              {ayudaDe === r.itemId && (
-                                <div className="mt-2 border-l-4 border-acero-900 bg-papel p-3 text-sm">
-                                  <p>{info.hallazgoTipico}</p>
-                                  {HALLAZGO_DERIVADO.has(info.id) && (
-                                    <p className="mt-2 text-acero-500">
-                                      Redacción derivada de la condición, todavía no tomada del
-                                      informe original.
-                                    </p>
-                                  )}
-                                </div>
+                          {/* Un NO OK sin foto no se puede dejar así: la cámara aparece acá
+                              mismo, sin abrir otra pantalla. */}
+                          {noConforme && !bloqueado && (
+                            <div className="ml-10 mt-2">
+                              {faltaFoto && (
+                                <p className="mb-1.5 text-sm font-semibold text-critico-ink">
+                                  Falta la foto de este hallazgo.
+                                </p>
                               )}
+                              <CapturaFoto
+                                itemId={r.itemId}
+                                fotos={r.evidencia}
+                                onCambio={(fotos) => onFotos(r.itemId, fotos)}
+                                compacto
+                              />
                             </div>
+                          )}
+
+                          {noConforme && bloqueado && (
+                            <p className="ml-10 mt-1 text-sm text-acero-500">
+                              {r.evidencia.length} foto(s) · {ETIQUETA_ESTADO[r.estado]}
+                            </p>
                           )}
                         </li>
                       );
@@ -305,31 +335,32 @@ export function ListaZonas({
   );
 }
 
-/**
- * En celular solo se muestran la búsqueda y «Solo pendientes», que es lo que se usa casi
- * siempre. Los otros cinco filtros viven detrás de un botón: desplegados ocupaban media
- * pantalla antes de mostrar un solo ítem.
- */
 function BarraFiltros({
   filtros,
   onFiltros,
   visibles,
+  pendientes,
+  onCerrarTodas,
+  onAbrirTodas,
 }: {
   filtros: Filtros;
   onFiltros: (f: Filtros) => void;
   visibles: number;
+  pendientes: number;
+  onCerrarTodas: () => void;
+  onAbrirTodas: () => void;
 }) {
   const [abiertos, setAbiertos] = useState(false);
   const set = <K extends keyof Filtros>(k: K, v: Filtros[K]) => onFiltros({ ...filtros, [k]: v });
   const avanzados = hayFiltrosAvanzados(filtros);
 
   return (
-    <div className="panel p-3">
+    <div className="panel p-2.5">
       <div className="flex flex-wrap gap-2">
         <input
           type="search"
-          className="campo min-w-[10rem] flex-1"
-          placeholder="Buscar en los ítems"
+          className="campo min-w-[9rem] flex-1"
+          placeholder="Buscar"
           value={filtros.texto}
           onChange={(e) => set("texto", e.target.value)}
           aria-label="Buscar en los ítems"
@@ -344,7 +375,7 @@ function BarraFiltros({
           }`}
           onClick={() => set("soloPendientes", !filtros.soloPendientes)}
         >
-          Solo pendientes
+          Pendientes{pendientes > 0 ? ` (${pendientes})` : ""}
         </button>
         <button
           type="button"
@@ -424,14 +455,20 @@ function BarraFiltros({
         </div>
       )}
 
-      <div className="mt-2 flex items-center justify-between text-sm text-acero-700">
+      <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-acero-700">
         <span className="cifras">
           {visibles} {visibles === 1 ? "ítem" : "ítems"}
         </span>
+        <button type="button" className="underline" onClick={onAbrirTodas}>
+          Desplegar todo
+        </button>
+        <button type="button" className="underline" onClick={onCerrarTodas}>
+          Plegar todo
+        </button>
         {(avanzados || filtros.texto || filtros.soloPendientes) && (
           <button
             type="button"
-            className="font-semibold underline"
+            className="ml-auto font-semibold underline"
             onClick={() => onFiltros(FILTROS_VACIOS)}
           >
             Limpiar filtros

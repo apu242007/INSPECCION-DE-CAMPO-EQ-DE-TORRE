@@ -12,7 +12,7 @@ import { descargar } from "../lib/descargar";
 import { calcularSemaforo } from "../lib/metrics";
 import { cerrarEnSharePoint, enviarRecorrida, MAX_PDF_BYTES } from "../services/sync";
 import * as storage from "../storage";
-import type { ItemAdicional, RegistroItem } from "../types";
+import type { Estado, Foto, ItemAdicional, RegistroItem } from "../types";
 import { CLASE_SEMAFORO, fechaAR } from "../ui";
 
 /**
@@ -36,14 +36,6 @@ const VISTAS: { v: Vista; texto: string }[] = [
   { v: "envio", texto: "Envío y cierre" },
 ];
 
-/**
- * Un dispositivo de mano no se reconoce por el ancho: una tablet de 834px en el piso de
- * trabajo es un equipo de campo, y un monitor de 1024px no. Lo que los separa es el puntero:
- * grueso = dedo. Es la señal correcta para entrar en modo paso a paso.
- */
-const esDeMano = () =>
-  window.matchMedia("(pointer: coarse)").matches && window.matchMedia("(max-width: 1279px)").matches;
-
 export function RecorridaPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -63,13 +55,41 @@ export function RecorridaPage() {
     void storage.leerConfig().then((c) => setResponsables(c.responsablesFrecuentes));
   }, []);
 
-  // En celular, una recorrida abierta y no cerrada entra en paso a paso: es el modo de campo.
-  const [vistaInicialAplicada, setVistaInicialAplicada] = useState(false);
-  useEffect(() => {
-    if (!recorrida || vistaInicialAplicada) return;
-    setVista(esDeMano() && !recorrida.cerrada ? "campo" : "lista");
-    setVistaInicialAplicada(true);
-  }, [recorrida, vistaInicialAplicada]);
+  /*
+   * Se abre SIEMPRE en Lista. Es lo que se espera de un check: bajar marcando, un toque por
+   * item. El paso a paso queda como una opcion mas —sirve arriba del mastil, con guantes y
+   * una mano— pero no puede ser lo que aparece por defecto.
+   */
+
+  /**
+   * Marcar desde la fila. Es la accion principal de la app y tiene que costar UN toque:
+   * la propuesta de reiteracion se aplica sola y la foto se pide ahi mismo, sin cambiar
+   * de pantalla.
+   */
+  const cambiarEstado = useCallback(
+    (itemId: number, estado: Estado) => {
+      const necesita = estado === "NO_OK" || estado === "EN_PROC";
+      const propuesta = ctx.proponer(itemId);
+      ctx.actualizarRegistro(itemId, (r) => ({
+        ...r,
+        estado,
+        fechaVerif: new Date().toISOString(),
+        origen: necesita ? (r.origen ?? propuesta.origen) : undefined,
+        reiteracion: necesita ? (r.reiteracion ?? propuesta.reiteracion) : undefined,
+        // Un item que deja de ser no conforme no conserva evidencia de un hallazgo que ya no existe.
+        evidencia: necesita ? r.evidencia : [],
+        notaVoz: necesita ? r.notaVoz : undefined,
+      }));
+    },
+    [ctx],
+  );
+
+  const cambiarFotos = useCallback(
+    (itemId: number, fotos: Foto[]) => {
+      ctx.actualizarRegistro(itemId, (r) => ({ ...r, evidencia: fotos }));
+    },
+    [ctx],
+  );
 
   const abrirItem = useCallback((itemId: number) => {
     setItemAbierto(itemId);
@@ -263,6 +283,8 @@ export function RecorridaPage() {
               catalogo={ctx.catalogoPorId}
               filtros={filtros}
               onFiltros={setFiltros}
+              onCambiarEstado={cambiarEstado}
+              onFotos={cambiarFotos}
               onAbrirItem={abrirItem}
               resaltados={resaltados}
             />
@@ -276,6 +298,7 @@ export function RecorridaPage() {
                   recorrida={recorrida}
                   catalogo={ctx.catalogoPorId}
                   filtros={filtros}
+                  onCambiarEstado={cambiarEstado}
                   onAbrirItem={abrirItem}
                   itemSeleccionado={itemAbierto ?? undefined}
                 />

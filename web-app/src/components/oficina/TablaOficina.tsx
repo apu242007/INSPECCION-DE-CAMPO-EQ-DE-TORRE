@@ -1,9 +1,10 @@
 import { useMemo } from "react";
 import { criticidadEfectiva, estaEscalado } from "../../lib/metrics";
 import { badgeOrigen } from "../../lib/reiteracion";
-import type { Criticidad, ItemCatalogo, Recorrida } from "../../types";
-import { CLASE_CRITICIDAD, CLASE_ESTADO, ETIQUETA_CRITICIDAD, ETIQUETA_ESTADO, fechaSoloDia } from "../../ui";
+import type { Criticidad, Estado, ItemCatalogo, Recorrida } from "../../types";
+import { CLASE_CRITICIDAD, ETIQUETA_CRITICIDAD, fechaSoloDia } from "../../ui";
 import { aplicarFiltros, type Filtros } from "../ListaZonas";
+import { SelectorEstado } from "../SelectorEstado";
 
 /**
  * Vista tabla de escritorio. Es para trabajar el pendiente después de la recorrida:
@@ -14,11 +15,19 @@ interface Props {
   recorrida: Recorrida;
   catalogo: ReadonlyMap<number, ItemCatalogo>;
   filtros: Filtros;
+  onCambiarEstado: (itemId: number, estado: Estado) => void;
   onAbrirItem: (itemId: number) => void;
   itemSeleccionado?: number;
 }
 
-export function TablaOficina({ recorrida, catalogo, filtros, onAbrirItem, itemSeleccionado }: Props) {
+export function TablaOficina({
+  recorrida,
+  catalogo,
+  filtros,
+  onCambiarEstado,
+  onAbrirItem,
+  itemSeleccionado,
+}: Props) {
   const registros = useMemo(
     () => aplicarFiltros(recorrida.registros, catalogo, filtros),
     [recorrida.registros, catalogo, filtros],
@@ -37,7 +46,7 @@ export function TablaOficina({ recorrida, catalogo, filtros, onAbrirItem, itemSe
             <th className="p-2">Zona</th>
             <th className="p-2">Crit.</th>
             <th className="p-2">Ítem</th>
-            <th className="p-2">Estado</th>
+            <th className="w-[230px] p-2">Estado</th>
             <th className="p-2">Origen</th>
             <th className="p-2">Resp.</th>
             <th className="p-2">Plazo</th>
@@ -72,14 +81,15 @@ export function TablaOficina({ recorrida, catalogo, filtros, onAbrirItem, itemSe
                   {estaEscalado(r, catalogo) && <span className="badge ml-1 bg-critico">ESC</span>}
                 </td>
                 <td className="p-2">{info?.item}</td>
+                {/* Tambien acá se marca desde la fila: en oficina se repasan 94 ítems y
+                    abrir el detalle para cada uno es el mismo problema que en la lista. */}
                 <td className="p-2">
-                  {r.estado === "SIN_REVISAR" ? (
-                    <span className="text-sm text-acero-500">Pendiente</span>
-                  ) : (
-                    <span className={`badge ${CLASE_ESTADO[r.estado]}`}>
-                      {ETIQUETA_ESTADO[r.estado]}
-                    </span>
-                  )}
+                  <SelectorEstado
+                    actual={r.estado}
+                    deshabilitado={recorrida.cerrada}
+                    etiqueta={`Estado del ítem ${r.itemId}`}
+                    onElegir={(estado) => onCambiarEstado(r.itemId, estado)}
+                  />
                 </td>
                 <td className="p-2 whitespace-nowrap">
                   {r.origen && (
