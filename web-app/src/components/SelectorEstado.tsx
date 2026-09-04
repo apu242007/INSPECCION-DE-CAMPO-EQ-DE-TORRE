@@ -57,7 +57,9 @@ export function SelectorEstado({ actual, onElegir, deshabilitado, etiqueta }: Pr
                         transition-transform active:translate-y-px
                         disabled:opacity-40 sm:text-[0.8rem]
                         ${o.clase} ${
-                          elegido ? "ring-[3px] ring-acero-900 ring-offset-1" : "opacity-90"
+                          elegido
+                            ? "es-marcado ring-[3px] ring-acero-900 ring-offset-1"
+                            : "opacity-55 saturate-50"
                         }`}
             style={{ touchAction: "manipulation", fontStretch: "82%", fontWeight: 700 }}
           >

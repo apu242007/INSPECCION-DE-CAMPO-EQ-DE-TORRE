@@ -74,7 +74,7 @@ export function PasoAPaso({ ctx, recorrida, onSalir, onAgregarAdicional }: Props
 
   useEffect(() => {
     if (!toast) return;
-    const t = setTimeout(() => setToast(null), 1000);
+    const t = setTimeout(() => setToast(null), 700);
     return () => clearTimeout(t);
   }, [toast]);
 
@@ -91,6 +91,11 @@ export function PasoAPaso({ ctx, recorrida, onSalir, onAgregarAdicional }: Props
 
   const revisados = recorrida.registros.filter((r) => r.estado !== "SIN_REVISAR").length;
   const propuesta = ctx.proponer(item.id);
+
+  // Progreso dentro de la zona actual: la pregunta real a mitad de un tramo no es "cuánto
+  // falta de las 94", es "cuánto falta de este tramo".
+  const itemsDeZona = items.filter((it) => it.zona === item.zona);
+  const posEnZona = itemsDeZona.findIndex((it) => it.id === item.id) + 1;
 
   function avanzar() {
     if (indice < items.length - 1) setIndice(indice + 1);
@@ -153,7 +158,10 @@ export function PasoAPaso({ ctx, recorrida, onSalir, onAgregarAdicional }: Props
               <span style={{ fontWeight: 700 }}>
                 {indice + 1}/{items.length}
               </span>
-              <span className="text-white/60"> · {item.zona}</span>
+              <span className="text-white/60">
+                {" "}
+                · {item.zona} ({posEnZona}/{itemsDeZona.length})
+              </span>
             </span>
             <span className="cifras shrink-0 text-sm text-white/60">{revisados} revisados</span>
           </div>
@@ -321,7 +329,7 @@ export function PasoAPaso({ ctx, recorrida, onSalir, onAgregarAdicional }: Props
       {toast && (
         <div
           role="status"
-          className="pointer-events-none fixed inset-x-0 top-1/2 z-50 mx-auto w-fit rounded-[3px] bg-acero-950 px-8 py-4 text-2xl font-bold text-white"
+          className="pointer-events-none fixed inset-x-0 bottom-24 z-50 mx-auto w-fit rounded-[3px] bg-acero-950 px-6 py-2.5 text-base font-bold text-white md:bottom-28"
         >
           {toast}
         </div>

@@ -1,6 +1,5 @@
-import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { BarraAccion } from "../components/BarraAccion";
 import { CierreRecorrida } from "../components/CierreRecorrida";
 import { Escalera } from "../components/Escalera";
 import { FILTROS_VACIOS, ListaZonas, type Filtros } from "../components/ListaZonas";
@@ -9,34 +8,24 @@ import { SyncPanel } from "../components/SyncPanel";
 import { ItemAdicionalNuevo, siguienteIdAdicional } from "../components/campo/ItemAdicionalNuevo";
 import { PasoAPaso } from "../components/campo/PasoAPaso";
 import { DetalleItem } from "../components/oficina/DetalleItem";
-import { TablaOficina } from "../components/oficina/TablaOficina";
 import { useRecorrida } from "../hooks/useRecorrida";
 import { descargar } from "../lib/descargar";
-import { calcularSemaforo } from "../lib/metrics";
 import { cerrarEnSharePoint, enviarRecorrida, MAX_PDF_BYTES } from "../services/sync";
 import * as storage from "../storage";
 import type { Estado, Foto, ItemAdicional, RegistroItem } from "../types";
-import { CLASE_SEMAFORO_LUZ, fechaAR } from "../ui";
+import { fechaAR } from "../ui";
 
-/**
- * recharts, jsPDF y SheetJS se cargan bajo demanda. En campo, con señal mala, no tiene
- * sentido bajar 900 KB de librerías de reporte para marcar 94 ítems con el pulgar.
- */
-const Dashboard = lazy(() =>
-  import("../components/Dashboard").then((m) => ({ default: m.Dashboard })),
-);
-
+/** jsPDF y SheetJS se cargan bajo demanda: en campo, con señal mala, no hay que bajar
+ *  las librerías de reporte para marcar 94 ítems con el pulgar. */
 const cargarPdf = () => import("../lib/pdfGenerator");
 const cargarExcel = () => import("../lib/excelExport");
 
-type Vista = "campo" | "lista" | "oficina" | "dashboard";
-
-const VISTAS: { v: Vista; texto: string }[] = [
-  { v: "campo", texto: "Campo" },
-  { v: "lista", texto: "Lista" },
-  { v: "oficina", texto: "Oficina" },
-  { v: "dashboard", texto: "Dashboard" },
-];
+/**
+ * Una sola pantalla de trabajo: el checklist con el cierre al final, tal como se recorre el
+ * equipo. "Campo" no es una pestaña — es un modo de recorrer que se activa con un botón y
+ * devuelve acá, al mismo lugar donde quedó, al salir.
+ */
+type Vista = "campo" | "checklist";
 
 export function RecorridaPage() {
   const { id } = useParams<{ id: string }>();
@@ -44,7 +33,7 @@ export function RecorridaPage() {
   const ctx = useRecorrida(id);
   const { recorrida } = ctx;
 
-  const [vista, setVista] = useState<Vista>("lista");
+  const [vista, setVista] = useState<Vista>("checklist");
   const [filtros, setFiltros] = useState<Filtros>(FILTROS_VACIOS);
   const [itemAbierto, setItemAbierto] = useState<number | null>(null);
   const [agregando, setAgregando] = useState<string | null>(null);
@@ -96,7 +85,7 @@ export function RecorridaPage() {
 
   const abrirItem = useCallback((itemId: number) => {
     setItemAbierto(itemId);
-    setVista((v) => (v === "campo" ? "lista" : v));
+    setVista((v) => (v === "campo" ? "checklist" : v));
   }, []);
 
   const guardarAdicional = useCallback(
@@ -190,11 +179,6 @@ export function RecorridaPage() {
     [recorrida],
   );
 
-  const semaforo = useMemo(
-    () => (recorrida ? calcularSemaforo(recorrida, ctx.catalogoPorId) : "VERDE"),
-    [recorrida, ctx.catalogoPorId],
-  );
-
   // Estado por zona: alimenta la escalera de la cabecera y el riel de escritorio.
   const zonas = useMemo(
     () => (recorrida ? estadoPorZona(recorrida, ctx.catalogoPorId, ctx.ordenZonas) : []),
@@ -230,7 +214,7 @@ export function RecorridaPage() {
       <PasoAPaso
         ctx={ctx}
         recorrida={recorrida}
-        onSalir={() => setVista("lista")}
+        onSalir={() => setVista("checklist")}
         onAgregarAdicional={(zona) => setAgregando(zona)}
       />
     );
@@ -253,10 +237,6 @@ export function RecorridaPage() {
           >
             ← Recorridas
           </button>
-          <span
-            aria-label={`Semáforo ${semaforo.toLowerCase()}`}
-            className={`h-2.5 w-2.5 shrink-0 rounded-full ${CLASE_SEMAFORO_LUZ[semaforo]}`}
-          />
           <span className="min-w-0 flex-1 truncate text-[0.95rem] text-white">
             <span style={{ fontStretch: "88%", fontWeight: 700 }}>{recorrida.equipo}</span>
             <span className="text-white/60">
@@ -268,29 +248,16 @@ export function RecorridaPage() {
           <span className="cifras shrink-0 text-xs text-white/60">
             {ctx.guardado ? "Guardado" : "Guardando…"}
           </span>
+          {!recorrida.cerrada && (
+            <button type="button" className="tab-cromo shrink-0" onClick={() => setVista("campo")}>
+              ▶ Modo campo
+            </button>
+          )}
         </div>
 
-        <div className="mx-auto w-full max-w-[1600px] px-3 pt-2 md:px-6">
+        <div className="mx-auto w-full max-w-[1600px] px-3 pb-2 pt-2 md:px-6">
           <Escalera zonas={zonas} />
         </div>
-
-        <nav
-          aria-label="Vistas de la recorrida"
-          className="mx-auto flex w-full max-w-[1600px] gap-1 overflow-x-auto px-3 py-2 md:px-6"
-        >
-          {VISTAS.map(({ v, texto }) => (
-            <button
-              key={v}
-              type="button"
-              disabled={v === "campo" && recorrida.cerrada}
-              aria-current={vista === v ? "page" : undefined}
-              className="tab-cromo"
-              onClick={() => setVista(v)}
-            >
-              {texto}
-            </button>
-          ))}
-        </nav>
       </header>
 
       {mensaje && (
@@ -309,106 +276,79 @@ export function RecorridaPage() {
         }`}
       >
         <div className="min-w-0">
-          {vista === "lista" && (
-            <>
-              <ListaZonas
-                recorrida={recorrida}
-                catalogo={ctx.catalogoPorId}
-                filtros={filtros}
-                onFiltros={setFiltros}
-                onCambiarEstado={cambiarEstado}
-                onFotos={cambiarFotos}
-                onAbrirItem={abrirItem}
-                resaltados={resaltados}
-              />
-              <div className="mt-4 grid gap-4 xl:grid-cols-2 xl:items-start">
-                <div className="space-y-4">
-                  <SyncPanel
-                    recorrida={recorrida}
-                    enviando={enviando}
-                    onEnviar={() => void enviar()}
-                    onCambio={() => void ctx.recargar()}
-                  />
+          <ListaZonas
+            recorrida={recorrida}
+            catalogo={ctx.catalogoPorId}
+            filtros={filtros}
+            onFiltros={setFiltros}
+            onCambiarEstado={cambiarEstado}
+            onFotos={cambiarFotos}
+            onAbrirItem={abrirItem}
+            resaltados={resaltados}
+          />
 
-                  <section className="panel p-4">
-                  <h2 className="mb-3 text-lg font-semibold">Exportar</h2>
-                  <div className="flex flex-wrap gap-2">
-                    <button className="boton-secundario" onClick={() => void exportarPDF()}>
-                      Descargar PDF
-                    </button>
-                    <button
-                      className="boton-secundario"
-                      onClick={async () => {
-                        const { generarExcel, nombreExcel } = await cargarExcel();
-                        descargar(generarExcel(recorrida, ctx.catalogoPorId), nombreExcel(recorrida));
-                      }}
-                    >
-                      Descargar Excel
-                    </button>
-                    <button
-                      className="boton-secundario"
-                      onClick={async () =>
-                        descargar(
-                          new Blob([await storage.exportarRecorridaJSON(recorrida)], {
-                            type: "application/json",
-                          }),
-                          `Recorrida-${recorrida.folio ?? recorrida.id}.json`,
-                        )
-                      }
-                    >
-                      Descargar JSON
-                    </button>
-                  </div>
-                  </section>
+          {/* Cierre: sincronización, exportación y firmas, después de toda la inspección. */}
+          <div className="mt-4 grid gap-4 xl:grid-cols-2 xl:items-start">
+            <div className="space-y-4">
+              <SyncPanel
+                recorrida={recorrida}
+                enviando={enviando}
+                onEnviar={() => void enviar()}
+                onCambio={() => void ctx.recargar()}
+              />
+
+              <section className="panel p-4">
+                <h2 className="mb-3 text-lg font-semibold">Exportar</h2>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    className="boton-secundario"
+                    disabled={generandoPdf}
+                    onClick={() => void exportarPDF()}
+                  >
+                    {generandoPdf ? "Generando…" : "Descargar PDF"}
+                  </button>
+                  <button
+                    className="boton-secundario"
+                    onClick={async () => {
+                      const { generarExcel, nombreExcel } = await cargarExcel();
+                      descargar(generarExcel(recorrida, ctx.catalogoPorId), nombreExcel(recorrida));
+                    }}
+                  >
+                    Descargar Excel
+                  </button>
+                  <button
+                    className="boton-secundario"
+                    onClick={async () =>
+                      descargar(
+                        new Blob([await storage.exportarRecorridaJSON(recorrida)], {
+                          type: "application/json",
+                        }),
+                        `Recorrida-${recorrida.folio ?? recorrida.id}.json`,
+                      )
+                    }
+                  >
+                    Descargar JSON
+                  </button>
                 </div>
-
-                <CierreRecorrida
-                recorrida={recorrida}
-                catalogo={ctx.catalogoPorId}
-                onFirmar={(quien, dataUrl) =>
-                  // Forma funcional siempre: las dos firmas escriben sobre el mismo objeto y con
-                  // spread del estado capturado la segunda pisa a la primera.
-                  ctx.actualizar((r) => ({ ...r, firmas: { ...r.firmas, [quien]: dataUrl } }))
-                }
-                onCerrar={cerrar}
-                onReabrir={() => ctx.actualizar((r) => ({ ...r, cerrada: false }))}
-                onAbrirItem={(itemId) => {
-                  setResaltados(new Set([itemId]));
-                  abrirItem(itemId);
-                }}
-                />
-              </div>
-            </>
-          )}
-
-          {vista === "oficina" && (
-            <div className="space-y-3">
-              <FiltrosOficina filtros={filtros} onFiltros={setFiltros} />
-              <div className="panel overflow-hidden">
-                <TablaOficina
-                  recorrida={recorrida}
-                  catalogo={ctx.catalogoPorId}
-                  filtros={filtros}
-                  onCambiarEstado={cambiarEstado}
-                  onAbrirItem={abrirItem}
-                  itemSeleccionado={itemAbierto ?? undefined}
-                />
-              </div>
+              </section>
             </div>
-          )}
 
-          {vista === "dashboard" && (
-            <Suspense
-              fallback={<p className="p-8 text-center text-acero-500">Cargando el dashboard…</p>}
-            >
-              <Dashboard
-                recorrida={recorrida}
-                catalogo={ctx.catalogoPorId}
-                historial={ctx.historial}
-                onAbrirItem={abrirItem}
-              />
-            </Suspense>
-          )}
+            <CierreRecorrida
+              recorrida={recorrida}
+              catalogo={ctx.catalogoPorId}
+              onFirmar={(quien, dataUrl) =>
+                // Forma funcional siempre: las dos firmas escriben sobre el mismo objeto y con
+                // spread del estado capturado la segunda pisa a la primera.
+                ctx.actualizar((r) => ({ ...r, firmas: { ...r.firmas, [quien]: dataUrl } }))
+              }
+              onCerrar={cerrar}
+              onReabrir={() => ctx.actualizar((r) => ({ ...r, cerrada: false }))}
+              onAbrirItem={(itemId) => {
+                setResaltados(new Set([itemId]));
+                abrirItem(itemId);
+              }}
+            />
+          </div>
         </div>
 
         {conDetalle && (
@@ -423,55 +363,6 @@ export function RecorridaPage() {
           </aside>
         )}
       </div>
-
-      {/* La accion que cierra el trabajo, a la vista mientras se hace el trabajo. */}
-      {vista !== "lista" && !recorrida.cerrada && (
-        <BarraAccion
-          recorrida={recorrida}
-          enviando={enviando}
-          generandoPdf={generandoPdf}
-          onEnviar={() => void enviar()}
-          onPdf={() => void exportarPDF()}
-          onIrAItem={(itemId) => {
-            setResaltados(new Set([itemId]));
-            abrirItem(itemId);
-          }}
-        />
-      )}
-    </div>
-  );
-}
-
-function FiltrosOficina({
-  filtros,
-  onFiltros,
-}: {
-  filtros: Filtros;
-  onFiltros: (f: Filtros) => void;
-}) {
-  return (
-    <div className="flex flex-wrap gap-2">
-      <input
-        type="search"
-        className="campo min-w-[12rem] flex-1"
-        placeholder="Buscar por texto, responsable o número de ítem"
-        value={filtros.texto}
-        onChange={(e) => onFiltros({ ...filtros, texto: e.target.value })}
-        aria-label="Buscar ítems"
-      />
-      <button
-        type="button"
-        aria-pressed={filtros.soloPendientes}
-        className={`boton-secundario ${
-          filtros.soloPendientes ? "bg-acero-900 text-papel" : "border-acero-300"
-        }`}
-        onClick={() => onFiltros({ ...filtros, soloPendientes: !filtros.soloPendientes })}
-      >
-        Solo pendientes
-      </button>
-      <button type="button" className="boton-secundario" onClick={() => onFiltros(FILTROS_VACIOS)}>
-        Limpiar
-      </button>
     </div>
   );
 }

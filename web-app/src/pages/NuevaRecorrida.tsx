@@ -41,6 +41,7 @@ export function NuevaRecorrida() {
   const [semilla, setSemilla] = useState<SemillaEquipo | undefined>();
   const [usarSemilla, setUsarSemilla] = useState(true);
   const [guardando, setGuardando] = useState(false);
+  const [masDatos, setMasDatos] = useState(false);
 
   useEffect(() => {
     void storage.equiposConocidos().then(setEquipos);
@@ -53,6 +54,18 @@ export function NuevaRecorrida() {
         setContrato(r.contrato ?? "");
         setEquipoRecorrida(r.equipoRecorrida);
         setCr(r.companyRepresentative ?? "");
+      });
+    } else {
+      // Empresa, operadora y contrato casi no cambian entre recorridas: se precargan de la
+      // última para no hacer elegir de nuevo lo mismo cada vez.
+      void storage.listarRecorridas().then(async (indice) => {
+        const ultima = indice[0];
+        if (!ultima) return;
+        const r = await storage.leerRecorrida(ultima.id);
+        if (!r) return;
+        setEmpresa(r.empresa);
+        setOperadora(r.operadora ?? "");
+        setContrato(r.contrato ?? "");
       });
     }
   }, [duplicarDe]);
@@ -138,8 +151,49 @@ export function NuevaRecorrida() {
               </option>
             ))}
           </select>
+          {pendientes.includes("Equipo") && (
+            <span className="mt-1 block text-xs font-semibold text-critico-ink">Requerido</span>
+          )}
         </label>
 
+        <label className="etiqueta">
+          Pozo / locación *
+          <input
+            className="campo mt-1"
+            value={pozo}
+            onChange={(e) => setPozo(e.target.value)}
+            placeholder="LACH-197"
+          />
+          {pendientes.includes("Pozo / locación") && (
+            <span className="mt-1 block text-xs font-semibold text-critico-ink">Requerido</span>
+          )}
+        </label>
+
+        <label className="etiqueta sm:col-span-2">
+          Quiénes recorren *
+          <input
+            className="campo mt-1"
+            value={equipoRecorrida}
+            onChange={(e) => setEquipoRecorrida(e.target.value)}
+            placeholder="J. Castro (QHSE), M. Pérez (Jefe de equipo)"
+          />
+          {pendientes.includes("Quiénes recorren") && (
+            <span className="mt-1 block text-xs font-semibold text-critico-ink">Requerido</span>
+          )}
+        </label>
+      </div>
+
+      <button
+        type="button"
+        className="boton-secundario w-fit"
+        aria-expanded={masDatos}
+        onClick={() => setMasDatos((v) => !v)}
+      >
+        {masDatos ? "− Datos adicionales" : "+ Datos adicionales"}
+      </button>
+
+      {masDatos && (
+      <div className="panel p-4 grid gap-3 sm:grid-cols-2">
         <label className="etiqueta">
           Empresa
           <input className="campo mt-1" value={empresa} onChange={(e) => setEmpresa(e.target.value)} />
@@ -173,11 +227,6 @@ export function NuevaRecorrida() {
         </label>
 
         <label className="etiqueta">
-          Pozo / locación *
-          <input className="campo mt-1" value={pozo} onChange={(e) => setPozo(e.target.value)} placeholder="LACH-197" />
-        </label>
-
-        <label className="etiqueta">
           Auditoría externa programada
           <input
             type="date"
@@ -193,16 +242,6 @@ export function NuevaRecorrida() {
         </label>
 
         <label className="etiqueta sm:col-span-2">
-          Quiénes recorren *
-          <input
-            className="campo mt-1"
-            value={equipoRecorrida}
-            onChange={(e) => setEquipoRecorrida(e.target.value)}
-            placeholder="J. Castro (QHSE), M. Pérez (Jefe de equipo)"
-          />
-        </label>
-
-        <label className="etiqueta sm:col-span-2">
           Notas / limitaciones de la recorrida
           <textarea
             className="campo mt-1"
@@ -213,6 +252,7 @@ export function NuevaRecorrida() {
           />
         </label>
       </div>
+      )}
 
       {semilla && (
         <div className="panel p-4 space-y-2 border-reiterado">

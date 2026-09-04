@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { HALLAZGO_DERIVADO, ZONAS } from "../data/catalogo";
 import { badgeOrigen } from "../lib/reiteracion";
 import { criticidadEfectiva, estaEscalado } from "../lib/metrics";
@@ -105,8 +105,15 @@ export function ListaZonas({
   onAbrirItem,
   resaltados,
 }: Props) {
-  const [cerradas, setCerradas] = useState<Set<string>>(new Set());
+  // Zonas forzadas manualmente (true = forzada abierta, false = forzada cerrada). Sin
+  // entrada acá, el plegado es automático: se cierra sola al completarse.
+  const [overrideZona, setOverrideZona] = useState<Map<string, boolean>>(new Map());
   const [ayudaDe, setAyudaDe] = useState<number | null>(null);
+  // Ítems que, aunque ya están marcados, el usuario reabrió a mano para revisarlos de nuevo.
+  const [expandidos, setExpandidos] = useState<Set<number>>(new Set());
+  const [deshacer, setDeshacer] = useState<{ itemId: number; anterior: Estado } | null>(null);
+  const deshacerTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const refsFila = useRef<Map<number, HTMLLIElement>>(new Map());
 
   const visibles = useMemo(
     () => aplicarFiltros(recorrida.registros, catalogo, filtros),
@@ -144,17 +151,48 @@ export function ListaZonas({
     ...[...porZona.keys()].filter((z) => !ZONAS.includes(z)),
   ].filter((z) => porZona.has(z));
 
-  function alternar(zona: string) {
-    setCerradas((prev) => {
-      const s = new Set(prev);
-      if (s.has(zona)) s.delete(zona);
-      else s.add(zona);
-      return s;
+  // Orden real en pantalla: sirve para saber cuál es "el siguiente pendiente" después de marcar.
+  const ordenVisible = useMemo(
+    () => zonasOrdenadas.flatMap((z) => (porZona.get(z) ?? []).map((r) => r.itemId)),
+    [zonasOrdenadas, porZona],
+  );
+
+  function alternarZona(zona: string, abiertaActual: boolean) {
+    setOverrideZona((prev) => {
+      const m = new Map(prev);
+      m.set(zona, !abiertaActual);
+      return m;
     });
   }
 
   const bloqueado = recorrida.cerrada;
   const pendientes = recorrida.registros.filter((r) => r.estado === "SIN_REVISAR").length;
+
+  /** Marcar desde la fila: guarda el estado anterior por 5 s para poder deshacer, y baja
+   *  el scroll al siguiente ítem pendiente. Sin esto, el colapso de la fila que se acaba
+   *  de marcar mueve el contenido bajo el dedo, que es peor que no colapsar. */
+  function marcar(itemId: number, estado: Estado) {
+    const anterior = recorrida.registros.find((r) => r.itemId === itemId)?.estado ?? "SIN_REVISAR";
+    onCambiarEstado(itemId, estado);
+
+    if (deshacerTimer.current) clearTimeout(deshacerTimer.current);
+    setDeshacer({ itemId, anterior });
+    deshacerTimer.current = setTimeout(() => setDeshacer(null), 5000);
+
+    const idx = ordenVisible.indexOf(itemId);
+    const siguiente = ordenVisible
+      .slice(idx + 1)
+      .find((id) => recorrida.registros.find((r) => r.itemId === id)?.estado === "SIN_REVISAR");
+    if (siguiente !== undefined) {
+      requestAnimationFrame(() => {
+        refsFila.current.get(siguiente)?.scrollIntoView({ behavior: "smooth", block: "center" });
+      });
+    }
+  }
+
+  useEffect(() => () => {
+    if (deshacerTimer.current) clearTimeout(deshacerTimer.current);
+  }, []);
 
   return (
     <div className="space-y-3">
@@ -163,8 +201,8 @@ export function ListaZonas({
         onFiltros={onFiltros}
         visibles={visibles.length}
         pendientes={pendientes}
-        onCerrarTodas={() => setCerradas(new Set(zonasOrdenadas))}
-        onAbrirTodas={() => setCerradas(new Set())}
+        onCerrarTodas={() => setOverrideZona(new Map(zonasOrdenadas.map((z) => [z, false])))}
+        onAbrirTodas={() => setOverrideZona(new Map(zonasOrdenadas.map((z) => [z, true])))}
       />
 
       {zonasOrdenadas.length === 0 ? (
@@ -179,8 +217,12 @@ export function ListaZonas({
             const noOk = registros.filter(
               (r) => r.estado === "NO_OK" || r.estado === "EN_PROC",
             ).length;
-            const abierta = !cerradas.has(zona);
             const completa = revisados === registros.length;
+            // Automático salvo que el usuario haya forzado el estado a mano. Una zona con
+            // hallazgos abiertos nunca se pliega sola: eso hay que seguir viéndolo.
+            const abierta = overrideZona.has(zona)
+              ? (overrideZona.get(zona) as boolean)
+              : !(completa && noOk === 0);
 
             return (
               /*
@@ -201,7 +243,7 @@ export function ListaZonas({
                     type="button"
                     aria-expanded={abierta}
                     className="flex w-full items-center gap-2.5 border-b border-acero-200 px-3 py-2 text-left"
-                    onClick={() => alternar(zona)}
+                    onClick={() => alternarZona(zona, abierta)}
                   >
                     <span aria-hidden className="w-3 shrink-0 text-acero-500">
                       {abierta ? "▾" : "▸"}
@@ -223,21 +265,58 @@ export function ListaZonas({
                   </button>
                 </h3>
 
-                {abierta && (
-                  <ul>
-                    {registros.map((r) => {
+                <div className="zona-cuerpo" data-plegada={!abierta}>
+                  <div>
+                    <ul>
+                      {registros.map((r) => {
                       const info =
                         catalogo.get(r.itemId) ??
                         recorrida.itemsAdicionales.find((a) => a.id === r.itemId);
                       const criticidad = criticidadEfectiva(r, catalogo) as Criticidad;
                       const noConforme = r.estado === "NO_OK" || r.estado === "EN_PROC";
                       const faltaFoto = noConforme && r.evidencia.length === 0;
+                      const resaltado = Boolean(resaltados?.has(r.itemId));
+                      const marcado = r.estado !== "SIN_REVISAR";
+                      const colapsada =
+                        marcado && !faltaFoto && !resaltado && !expandidos.has(r.itemId);
+
+                      if (colapsada) {
+                        return (
+                          <li
+                            key={r.itemId}
+                            ref={(el) => {
+                              if (el) refsFila.current.set(r.itemId, el);
+                              else refsFila.current.delete(r.itemId);
+                            }}
+                          >
+                            <button
+                              type="button"
+                              className={`fila-hecha flex w-full items-center gap-2 px-3 text-left text-sm ${
+                                r.estado === "OK" ? "text-conforme-ink" : ""
+                              }`}
+                              onClick={() =>
+                                setExpandidos((prev) => new Set(prev).add(r.itemId))
+                              }
+                            >
+                              <span className="chapa shrink-0">#{r.itemId}</span>
+                              <span className="min-w-0 flex-1 truncate">{info?.item}</span>
+                              <span className="shrink-0 font-semibold">
+                                {r.estado === "OK" ? "✓ OK" : ETIQUETA_ESTADO[r.estado]}
+                              </span>
+                            </button>
+                          </li>
+                        );
+                      }
 
                       return (
                         <li
                           key={r.itemId}
+                          ref={(el) => {
+                            if (el) refsFila.current.set(r.itemId, el);
+                            else refsFila.current.delete(r.itemId);
+                          }}
                           className={`fila px-3 py-2 ${
-                            faltaFoto || resaltados?.has(r.itemId)
+                            faltaFoto || resaltado
                               ? "bg-critico-suave"
                               : r.estado === "OK"
                                 ? "bg-conforme-suave"
@@ -251,9 +330,14 @@ export function ListaZonas({
                             <div className="min-w-0 flex-1">
                               <p className="text-[0.95rem] leading-snug">{info?.item}</p>
                               <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                                <span className={`badge ${CLASE_CRITICIDAD[criticidad]}`}>
-                                  {ETIQUETA_CRITICIDAD[criticidad]}
-                                </span>
+                                {/* Solo CRÍTICA se destaca como badge: con ~70% de los ítems en
+                                    MAYOR, un badge naranja en casi toda fila deja de ser señal.
+                                    El resto de la criticidad ya se lee en el montante de la zona. */}
+                                {criticidad === "CRITICA" && (
+                                  <span className={`badge ${CLASE_CRITICIDAD[criticidad]}`}>
+                                    {ETIQUETA_CRITICIDAD[criticidad]}
+                                  </span>
+                                )}
                                 {idsAdicionales.has(r.itemId) && (
                                   <span className="badge bg-acero-900">Adicional</span>
                                 )}
@@ -289,6 +373,21 @@ export function ListaZonas({
                                 >
                                   Detalle
                                 </button>
+                                {marcado && (
+                                  <button
+                                    type="button"
+                                    className="text-xs text-acero-500 underline"
+                                    onClick={() =>
+                                      setExpandidos((prev) => {
+                                        const s = new Set(prev);
+                                        s.delete(r.itemId);
+                                        return s;
+                                      })
+                                    }
+                                  >
+                                    Listo, replegar
+                                  </button>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -311,7 +410,7 @@ export function ListaZonas({
                               actual={r.estado}
                               deshabilitado={bloqueado}
                               etiqueta={`Estado del ítem ${r.itemId}`}
-                              onElegir={(estado) => onCambiarEstado(r.itemId, estado)}
+                              onElegir={(estado) => marcar(r.itemId, estado)}
                             />
                           </div>
 
@@ -340,12 +439,32 @@ export function ListaZonas({
                           )}
                         </li>
                       );
-                    })}
-                  </ul>
-                )}
+                      })}
+                    </ul>
+                  </div>
+                </div>
               </section>
             );
           })}
+        </div>
+      )}
+
+      {deshacer && (
+        <div
+          role="status"
+          className="fixed inset-x-0 bottom-4 z-40 mx-auto flex w-fit items-center gap-3 rounded-[3px] bg-acero-950 px-4 py-2.5 text-sm text-white shadow-lg"
+        >
+          <span>Ítem #{deshacer.itemId} marcado.</span>
+          <button
+            type="button"
+            className="font-bold underline"
+            onClick={() => {
+              onCambiarEstado(deshacer.itemId, deshacer.anterior);
+              setDeshacer(null);
+            }}
+          >
+            Deshacer
+          </button>
         </div>
       )}
     </div>

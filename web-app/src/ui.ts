@@ -95,25 +95,9 @@ export const LARGUERO_SEMAFORO: Record<Semaforo, string> = {
   VERDE: "larguero larguero-ok",
 };
 
-/** El semáforo sobre cromo: el mismo color de señal, aclarado para leerse en la chapa oscura. */
-export const CLASE_SEMAFORO_LUZ: Record<Semaforo, string> = {
-  ROJO: "bg-critico-luz",
-  AMARILLO: "bg-mayor-luz",
-  VERDE: "bg-conforme-luz",
-};
-
-export const CLASE_SEMAFORO: Record<Semaforo, string> = {
-  ROJO: "bg-critico",
-  AMARILLO: "bg-mayor",
-  VERDE: "bg-conforme",
-};
-
-/** Qué significa cada semáforo, en la voz de la app y sin adornos. */
-export const EXPLICACION_SEMAFORO: Record<Semaforo, string> = {
-  ROJO: "Hay hallazgos críticos abiertos, o ítems críticos todavía sin revisar.",
-  AMARILLO: "Hay hallazgos mayores abiertos.",
-  VERDE: "Todos los ítems están conformes o no aplican.",
-};
+/** El semáforo dejó de tener panel propio en pantalla (era el Dashboard, se sacó); sigue
+ *  vivo en el larguero de la ficha (`LARGUERO_SEMAFORO`) y en el cálculo que va a SharePoint,
+ *  el PDF y el Excel (`calcularSemaforo` en metrics.ts). */
 
 /**
  * Color del larguero de una zona: el montante estructural que se pinta a la izquierda de la

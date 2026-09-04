@@ -151,7 +151,7 @@ export function Recorridas() {
             <p className="text-xl font-semibold">Todavía no hay recorridas</p>
             <p className="mx-auto mt-2 max-w-md text-acero-700">
               Al crear una, la app genera los 94 ítems del catálogo en «sin revisar» y arranca en
-              modo paso a paso para recorrer el equipo.
+              el checklist, con el modo campo disponible como opción para recorrer el equipo.
             </p>
             <Link to="/nueva" className="boton-primario mx-auto mt-5 w-fit px-6">
               Crear la primera recorrida

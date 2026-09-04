@@ -574,6 +574,49 @@ body,
   @apply w-full overflow-x-auto;
 }
 
+@layer components {
+  /* Fila ya marcada: el trabajo hecho deja de gastar la pantalla que necesita el pendiente. */
+  .fila-hecha {
+    min-height: 32px;
+    padding-top: 0.375rem;
+    padding-bottom: 0.375rem;
+    opacity: 0.72;
+    transition: min-height 220ms ease, opacity 220ms ease;
+  }
+
+  /* Cuerpo de una zona que se pliega sola al completarse. El truco de grid-template-rows
+     anima algo que no tiene alto fijo (una lista de largo variable), cosa que max-height
+     no puede hacer sin saltos. */
+  .zona-cuerpo {
+    display: grid;
+    grid-template-rows: 1fr;
+    transition: grid-template-rows 260ms ease;
+  }
+  .zona-cuerpo[data-plegada="true"] {
+    grid-template-rows: 0fr;
+  }
+  .zona-cuerpo > div {
+    overflow: hidden;
+  }
+
+  /* Eco del toque al marcar un ítem: sin esto, marcar 40 ítems seguidos no deja ninguna
+     sensación de que la app reaccionó. */
+  @keyframes marcado {
+    0% {
+      transform: scale(1);
+    }
+    45% {
+      transform: scale(1.06);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+  .es-marcado {
+    animation: marcado 180ms ease-out;
+  }
+}
+
 /*
  * El movimiento solo responde a una acción de la persona (marcar, abrir, confirmar).
  * No hay entradas animadas ni transiciones de hover en tarjetas: en una app operativa eso
